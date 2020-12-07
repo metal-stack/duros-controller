@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: example-mt-sc
+provisioner: csi.lightbitslabs.com
+allowVolumeExpansion: true
+parameters:
+  mgmt-endpoint: 10.16.103.6:443,10.16.103.2:443,10.16.103.24:443
+  replica-count: "3"
+  compression: disabled
+  project-name: a
+  mgmt-scheme: grpcs
+  csi.storage.k8s.io/controller-publish-secret-name: example-secret
+  csi.storage.k8s.io/controller-publish-secret-namespace: default
+  csi.storage.k8s.io/controller-expand-secret-name: example-secret
+  csi.storage.k8s.io/controller-expand-secret-namespace: default
+  csi.storage.k8s.io/node-publish-secret-name: example-secret
+  csi.storage.k8s.io/node-publish-secret-namespace: default
+  csi.storage.k8s.io/node-stage-secret-name: example-secret
+  csi.storage.k8s.io/node-stage-secret-namespace: default
+  csi.storage.k8s.io/provisioner-secret-name: example-secret
+  csi.storage.k8s.io/provisioner-secret-namespace: default

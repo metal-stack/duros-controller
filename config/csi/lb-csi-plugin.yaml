@@ -1,0 +1,409 @@
+# CSIDriver ------------------------------------------------------------------
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: csi.lightbitslabs.com
+spec:
+  attachRequired: true
+  podInfoOnMount: true
+
+---
+
+# Controller plugin ----------------------------------------------------------
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: lb-csi-ctrl-sa
+  namespace: kube-system
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: lb-csi-provisioner-role
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: lb-csi-provisioner-binding
+subjects:
+  - kind: ServiceAccount
+    name: lb-csi-ctrl-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: lb-csi-provisioner-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: lb-csi-attacher-role
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: lb-csi-attacher-binding
+subjects:
+  - kind: ServiceAccount
+    name: lb-csi-ctrl-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: lb-csi-attacher-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# RBAC: external-resizer -------------------------
+# Taken from: https://github.com/kubernetes-csi/external-resizer/blob/master/deploy/kubernetes/rbac.yaml
+
+# Resizer must be able to work with PVCs, PVs, SCs.
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: external-resizer-runner
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-resizer-role
+subjects:
+  - kind: ServiceAccount
+    name: lb-csi-ctrl-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: external-resizer-runner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: lb-csi-controller
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: lb-csi-plugin
+      role: controller
+  serviceName: "lb-csi-ctrl-svc"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: lb-csi-plugin
+        role: controller
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: lb-csi-ctrl-sa
+      containers:
+        - name: lb-csi-plugin
+          # if hosting the plugin in a different registry, e.g. a local private
+          # Docker registry, modify the image identifier below accordingly:
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.2.0
+          args :
+            - "-P"
+          env:
+            # to inject jwt from secret using environment variables uncomment
+            # the following. Will define env var LB_CSI_JWT from value named jwt
+            # in secret named `los-secret`
+            # - name: LB_CSI_JWT
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: los-secret
+            #       key: jwt
+            - name: CSI_ENDPOINT
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: LB_CSI_NODE_ID
+              value: $(KUBE_NODE_NAME).ctrl
+            - name: LB_CSI_LOG_LEVEL
+              value: debug
+            - name: LB_CSI_LOG_ROLE
+              value: controller
+            - name: LB_CSI_LOG_FMT
+              value: text
+            - name: LB_CSI_LOG_TIME
+              value: "true"
+          imagePullPolicy: "Always"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-provisioner
+          # if hosting the K8s CSI plugin sidecar container images in a
+          # different registry, e.g. a local private Docker registry,
+          # modify the image identifier below accordingly:
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v1.5.0
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--v=4"
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-attacher
+          # if hosting the K8s CSI plugin sidecar container images in a
+          # different registry, e.g. a local private Docker registry,
+          # modify the image identifier below accordingly:
+          image: quay.io/k8scsi/csi-attacher:v2.1.0
+          args:
+            - "--v=4"
+            - "--csi-address=$(ADDRESS)"
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-resizer
+          image: k8s.gcr.io/sig-storage/csi-resizer:v0.5.0
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+          env:
+            - name: ADDRESS
+              value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
+      volumes:
+        - name: socket-dir
+          emptyDir: {}
+      # to enable seamless access to secure private Docker registries (e.g. to
+      # `docker.lightbitslabs.com/lightos-k8s`), create a k8s secret with
+      # the corresponding credentials and reference it in an `imagePullSecrets`
+      # clause here, as an immediate descendant of `spec.template.spec`:
+      #imagePullSecrets:
+      #- name: my-docker-registry-credentials-secret
+
+---
+
+# Node plugin ----------------------------------------------------------------
+
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: lb-csi-node-sa
+  namespace: kube-system
+
+---
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: lb-csi-node
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: lb-csi-plugin
+      role: node
+  template:
+    metadata:
+      labels:
+        app: lb-csi-plugin
+        role: node
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccount: lb-csi-node-sa
+      hostNetwork: true
+      initContainers:
+        - name: init-nvme-tcp
+          # if hosting the plugin in a different registry, e.g. a local private
+          # Docker registry, modify the image identifier below accordingly:
+          image: busybox:1.32
+          command:
+          - /bin/sh
+          - -c
+          - >-
+            [ -e /sys/module/nvme_tcp ] &&
+            modinfo nvme_tcp ||
+            { modinfo nvme_tcp && modprobe nvme_tcp ; } ||
+            { echo "FAILED to load nvme-tcp kernel driver" && exit 1 ; }
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: modules-dir
+              mountPath: /lib/modules
+              mountPropagation: HostToContainer
+      containers:
+        - name: lb-csi-plugin
+          # if hosting the plugin in a different registry, e.g. a local private
+          # Docker registry, modify the image identifier below accordingly:
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.2.0
+          args :
+            - "-P"
+          env:
+            # to inject jwt from secret using environment variables uncomment
+            # the following. Will define env var LB_CSI_JWT from value named jwt
+            # in secret named `los-secret`
+            # - name: LB_CSI_JWT
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: los-secret
+            #       key: jwt
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: LB_CSI_NODE_ID
+              value: $(KUBE_NODE_NAME).node
+            - name: LB_CSI_LOG_LEVEL
+              value: debug
+            - name: LB_CSI_LOG_ROLE
+              value: node
+            - name: LB_CSI_LOG_FMT
+              value: text
+            - name: LB_CSI_LOG_TIME
+              value: "true"
+          imagePullPolicy: "Always"
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: "Bidirectional"
+            - name: device-dir
+              mountPath: /dev
+            - name: discovery-client-dir
+              mountPath: /etc/discovery-client/discovery.d
+        - name: csi-node-driver-registrar
+          # if hosting the K8s CSI plugin sidecar container images in a
+          # different registry, e.g. a local private Docker registry,
+          # modify the image identifier below accordingly:
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v1.2.0
+          args:
+            - "--v=4"
+            - "--csi-address=$(ADDRESS)"
+            - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm -rf /registration/csi.lightbitslabs.com /registration/csi.lightbitslabs.com-reg.sock"]
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+            - name: DRIVER_REG_SOCK_PATH
+              value: /var/lib/kubelet/plugins/csi.lightbitslabs.com/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi/
+            - name: registration-dir
+              mountPath: /registration/
+        - name: lb-nvme-discovery-client
+          # if hosting the plugin in a different registry, e.g. a local private
+          # Docker registry, modify the image identifier below accordingly:
+          image: docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.2.0
+          imagePullPolicy: "Always"
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          volumeMounts:
+            - name: device-dir
+              mountPath: /dev
+            - name: discovery-client-dir
+              mountPath: /etc/discovery-client/discovery.d
+      volumes:
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry/
+            type: DirectoryOrCreate
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi.lightbitslabs.com
+            type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: device-dir
+          hostPath:
+            path: /dev
+        - name: modules-dir
+          hostPath:
+            path: /lib/modules
+        - name: discovery-client-dir
+          emptyDir: {}

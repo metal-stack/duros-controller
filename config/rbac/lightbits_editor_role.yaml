@@ -1,0 +1,24 @@
+# permissions for end users to edit lightbits.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: lightbits-editor-role
+rules:
+- apiGroups:
+  - storage.metal-stack.io
+  resources:
+  - lightbits
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - storage.metal-stack.io
+  resources:
+  - lightbits/status
+  verbs:
+  - get

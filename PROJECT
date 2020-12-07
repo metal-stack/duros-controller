@@ -1,0 +1,7 @@
+domain: metal-stack.io
+repo: github.com/metal-stack/duros-controller
+resources:
+- group: storage
+  kind: LightBits
+  version: v1
+version: "2"

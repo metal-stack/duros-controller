@@ -1,0 +1,21 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: example-sc
+provisioner: csi.lightbitslabs.com
+allowVolumeExpansion: true
+parameters:
+  mgmt-endpoint: 10.0.0.1:80,10.0.0.2:80,10.0.0.3:80
+  mgmt-scheme: grpcs
+  project-name: project-a
+  replica-count: "3"
+  compression: disabled
+  # Change the NameSpace below if lb-csi-plugin doesn't run in kube-system
+  csi.storage.k8s.io/controller-publish-secret-name: lb-csi-creds
+  csi.storage.k8s.io/controller-publish-secret-namespace: kube-system
+  csi.storage.k8s.io/node-publish-secret-name: lb-csi-creds
+  csi.storage.k8s.io/node-publish-secret-namespace: kube-system
+  csi.storage.k8s.io/provisioner-secret-name: lb-csi-creds
+  csi.storage.k8s.io/provisioner-secret-namespace: kube-system
+  csi.storage.k8s.io/controller-expand-secret-name: lb-csi-creds
+  csi.storage.k8s.io/controller-expand-secret-namespace: kube-system

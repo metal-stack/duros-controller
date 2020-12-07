@@ -1,0 +1,10 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: example-sc
+provisioner: csi.lightbitslabs.com
+allowVolumeExpansion: true
+parameters:
+  mgmt-endpoint: 10.0.0.1:80,10.0.0.2:80,10.0.0.3:80
+  replica-count: "3"
+  compression: disabled
