@@ -42,11 +42,12 @@ const (
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
 	client.Client
-	Log         logr.Logger
-	Scheme      *runtime.Scheme
-	Namespace   string
-	DurosClient durosv2.DurosAPIClient
-	Endpoints   duros.EPs
+	Log          logr.Logger
+	Scheme       *runtime.Scheme
+	Namespace    string
+	DurosClient  durosv2.DurosAPIClient
+	DurosContext context.Context
+	Endpoints    duros.EPs
 }
 
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros,verbs=get;list;watch;create;update;patch;delete
@@ -89,13 +90,13 @@ func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	projectID := lbs.Spec.MetalProjectID
 	replicas := lbs.Spec.Replicas
 
-	p, err := r.createProjectIfNotExist(ctx, projectID)
+	p, err := r.createProjectIfNotExist(r.DurosContext, projectID)
 	if err != nil {
 		return requeue, err
 	}
 	log.Info("created project", "name", p.Name)
 
-	cred, err := r.createProjectCredentialsIfNotExist(ctx, projectID, adminKey)
+	cred, err := r.createProjectCredentialsIfNotExist(r.DurosContext, projectID, adminKey)
 	if err != nil {
 		return requeue, err
 	}

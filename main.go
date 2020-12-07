@@ -120,12 +120,13 @@ func main() {
 	}
 	setupLog.Info("connected", "duros version", version.ApiVersion)
 	if err = (&controllers.DurosReconciler{
-		Client:      mgr.GetClient(),
-		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
-		Scheme:      mgr.GetScheme(),
-		Namespace:   namespace,
-		DurosClient: durosClient,
-		Endpoints:   durosEPs,
+		Client:       mgr.GetClient(),
+		Log:          ctrl.Log.WithName("controllers").WithName("LightBits"),
+		Scheme:       mgr.GetScheme(),
+		Namespace:    namespace,
+		DurosClient:  durosClient,
+		Endpoints:    durosEPs,
+		DurosContext: ctx,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LightBits")
 		os.Exit(1)
