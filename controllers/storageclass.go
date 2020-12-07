@@ -723,7 +723,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	}
 
 	for _, replicas := range replicas {
-		storageClassName := "lb-sc-" + replicas + "-replica"
+		storageClassName := "lightbits-" + replicas + "-replica"
 		storageClassTemplate.ObjectMeta = metav1.ObjectMeta{Name: storageClassName}
 		storageClassTemplate.Parameters["mgmt-endpoint"] = r.Endpoints.String()
 		storageClassTemplate.Parameters["project-name"] = projectID

@@ -51,6 +51,7 @@ type DurosReconciler struct {
 
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile the Duros CRD
 func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -88,15 +89,18 @@ func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	projectID := lbs.Spec.MetalProjectID
 	replicas := lbs.Spec.Replicas
 
-	err := r.createProjectIfNotExist(ctx, projectID)
+	p, err := r.createProjectIfNotExist(ctx, projectID)
 	if err != nil {
 		return requeue, err
 	}
+	log.Info("created project", "name", p.Name)
 
 	cred, err := r.createProjectCredentialsIfNotExist(ctx, projectID, adminKey)
 	if err != nil {
 		return requeue, err
 	}
+	log.Info("created credential", "id", cred.ID, "project", cred.ProjectName)
+
 	// Deploy StorageClass Secret
 	err = r.deployStorageClassSecret(ctx, cred, adminKey)
 	if err != nil {

@@ -14,26 +14,25 @@ import (
 )
 
 // createProjectIfNotExist check for duros project and create if required
-func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID string) error {
+func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID string) (*durosv2.Project, error) {
 
-	lpr, err := r.DurosClient.ListProjects(ctx, nil, nil)
+	p, err := r.DurosClient.GetProject(ctx, &durosv2.GetProjectRequest{Name: projectID}, nil)
 	if err != nil {
-		return err
-	}
-	projectExists := false
-	for _, p := range lpr.Projects {
-		if p.Name == projectID {
-			projectExists = true
+		s, ok := status.FromError(err)
+		if !ok {
+			return nil, fmt.Errorf("unable to parse duros error")
+		}
+		switch s.Code() {
+		case codes.NotFound:
+			p, err := r.DurosClient.CreateProject(ctx, &durosv2.CreateProjectRequest{Name: projectID}, nil)
+			if err != nil {
+				return p, err
+			}
+		default:
+			return nil, err
 		}
 	}
-	if !projectExists {
-		_, err := r.DurosClient.CreateProject(ctx, &durosv2.CreateProjectRequest{Name: projectID}, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return p, nil
 }
 
 func (r *DurosReconciler) createProjectCredentialsIfNotExist(ctx context.Context, projectID string, adminKey []byte) (*durosv2.Credential, error) {
