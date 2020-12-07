@@ -35,7 +35,6 @@ import (
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
 	duros "github.com/metal-stack/duros-go"
-	uberzap "go.uber.org/zap"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -109,11 +108,7 @@ func main() {
 
 	ctx := context.Background()
 	durosEPs := duros.MustParseCSV(endpoints)
-	realZap, err := uberzap.NewProduction()
-	if err != nil {
-		panic(err)
-	}
-	durosClient, err := duros.Dial(ctx, durosEPs, duros.GRPCS, string(at), realZap.Sugar())
+	durosClient, err := duros.Dial(ctx, durosEPs, duros.GRPCS, string(at), zap.NewRaw().Sugar())
 	if err != nil {
 		setupLog.Error(err, "problem running duros-controller")
 		panic(err)
@@ -123,7 +118,7 @@ func main() {
 		setupLog.Error(err, "unable to connect to duros")
 		panic(err)
 	}
-	cinfo, err := durosClient.GetClusterInfo(ctx, &v2.GetClusterRequest{}, nil)
+	cinfo, err := durosClient.GetClusterInfo(ctx, &v2.GetClusterRequest{})
 	if err != nil {
 		setupLog.Error(err, "unable to query duros api for cluster info")
 		panic(err)
