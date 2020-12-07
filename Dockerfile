@@ -26,6 +26,7 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY hack/ hack/
 COPY config/ config/
+COPY main.go main.go
 
 # Build
 RUN make
