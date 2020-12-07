@@ -118,7 +118,7 @@ func main() {
 		setupLog.Error(err, "unable to connect to duros")
 		panic(err)
 	}
-	setupLog.Info("connected to duros version:%q", version.ApiVersion)
+	setupLog.Info("connected", "duros version", version.ApiVersion)
 	if err = (&controllers.DurosReconciler{
 		Client:      mgr.GetClient(),
 		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
