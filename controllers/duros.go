@@ -15,7 +15,6 @@ import (
 
 // createProjectIfNotExist check for duros project and create if required
 func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID string) (*durosv2.Project, error) {
-
 	p, err := r.DurosClient.GetProject(ctx, &durosv2.GetProjectRequest{Name: projectID})
 	if err != nil {
 		s, ok := status.FromError(err)
@@ -24,9 +23,9 @@ func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID
 		}
 		switch s.Code() {
 		case codes.NotFound:
-			p, err := r.DurosClient.CreateProject(ctx, &durosv2.CreateProjectRequest{Name: projectID})
+			p, err = r.DurosClient.CreateProject(ctx, &durosv2.CreateProjectRequest{Name: projectID})
 			if err != nil {
-				return p, err
+				return nil, err
 			}
 		default:
 			return nil, err
