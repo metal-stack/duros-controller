@@ -20,9 +20,7 @@ import (
 	"context"
 	"flag"
 	"os"
-	"time"
 
-	"github.com/metal-stack/duros-controller/pkg/manifest"
 	_ "github.com/metal-stack/duros-controller/statik"
 	v2 "github.com/metal-stack/duros-go/api/duros/v2"
 	"github.com/metal-stack/v"
@@ -84,20 +82,20 @@ func main() {
 	}
 
 	// Install required CRD
-	manifests, err := manifest.InstallManifests(restConfig, manifest.InstallOptions{
-		UseVFS: true,
-		Paths:  []string{"/crd/bases"},
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to create crds of duros-controller")
-		os.Exit(1)
-	}
+	// manifests, err := manifest.InstallManifests(restConfig, manifest.InstallOptions{
+	// 	UseVFS: true,
+	// 	Paths:  []string{"/crd/bases"},
+	// })
+	// if err != nil {
+	// 	setupLog.Error(err, "unable to create crds of duros-controller")
+	// 	os.Exit(1)
+	// }
 
-	err = manifest.WaitForManifests(restConfig, manifests, manifest.InstallOptions{MaxTime: 500 * time.Millisecond, PollInterval: 100 * time.Millisecond})
-	if err != nil {
-		setupLog.Error(err, "unable to wait for created crds of duros-controller")
-		os.Exit(1)
-	}
+	// err = manifest.WaitForManifests(restConfig, manifests, manifest.InstallOptions{MaxTime: 500 * time.Millisecond, PollInterval: 100 * time.Millisecond})
+	// if err != nil {
+	// 	setupLog.Error(err, "unable to wait for created crds of duros-controller")
+	// 	os.Exit(1)
+	// }
 
 	// connect to duros
 	ctx := context.Background()
