@@ -9,7 +9,7 @@ rules:
 - apiGroups:
   - storage.metal-stack.io
   resources:
-  - lightbits
+  - duros
   verbs:
   - create
   - delete
@@ -21,7 +21,7 @@ rules:
 - apiGroups:
   - storage.metal-stack.io
   resources:
-  - lightbits/status
+  - duros/status
   verbs:
   - get
   - patch

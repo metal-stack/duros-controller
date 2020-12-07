@@ -19,7 +19,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: Duros is the Schema for the duros API
+        description: Duros is the Schema for the Duros API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -36,8 +36,18 @@ spec:
           spec:
             description: DurosSpec defines the desired state of Duros
             properties:
+              adminKeySecretRef:
+                description: AdminKeySecretRef points to the secret where the duros
+                  admin key is stored
+                type: string
               metal_project_id:
                 type: string
+              replicas:
+                description: Replicas defines for which replicas a storageclass should
+                  be deployed
+                items:
+                  type: string
+                type: array
             type: object
           status:
             description: DurosStatus defines the observed state of Duros
