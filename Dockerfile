@@ -35,5 +35,5 @@ RUN make
 FROM alpine:3.12
 WORKDIR /
 COPY --from=builder /workspace/bin/duros-controller .
-USER nobody
+USER 65534
 ENTRYPOINT ["/duros-controller"]
