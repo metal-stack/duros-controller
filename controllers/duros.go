@@ -35,7 +35,7 @@ func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID
 }
 
 func (r *DurosReconciler) createProjectCredentialsIfNotExist(ctx context.Context, projectID string, adminKey []byte) (*durosv2.Credential, error) {
-	id := projectID + ":root"
+	id := projectID
 	cred, err := r.DurosClient.GetCredential(ctx, &durosv2.GetCredentialRequest{ID: id, ProjectName: projectID})
 	if err != nil {
 		s, ok := status.FromError(err)
