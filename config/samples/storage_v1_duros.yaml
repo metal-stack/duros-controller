@@ -8,5 +8,7 @@ spec:
   # Add fields here
   metal_project_id: 5820c4e7-fbd4-4e4b-a40b-2b83eb34bbe1
   replicas:
-    partition-storage-gold: 2
-    partition-storage-platin: 3
+    - name: partition-storage-gold
+      count: 2
+    - name: partition-storage-platin
+      count: 3
