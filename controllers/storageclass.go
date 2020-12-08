@@ -203,7 +203,7 @@ var (
 			{
 				APIGroups: []string{""},
 				Resources: []string{"persistentvolumes"},
-				Verbs:     []string{"get", "list", "watch", "create", "delete"},
+				Verbs:     []string{"get", "list", "watch", "create", "delete", "patch"},
 			},
 			{
 				APIGroups: []string{""},
