@@ -10,7 +10,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/metal-stack/duros-go v0.0.0-20201208133557-92505ba046b9
+	github.com/metal-stack/duros-go v0.0.0-20201208143156-29e7483921aa
 	github.com/metal-stack/v v1.0.2
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onsi/ginkgo v1.14.2

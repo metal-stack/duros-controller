@@ -428,6 +428,8 @@ github.com/metal-stack/duros-go v0.0.0-20201206100937-c4a2f8bd9014 h1:oCfD7iQC4W
 github.com/metal-stack/duros-go v0.0.0-20201206100937-c4a2f8bd9014/go.mod h1:LMGXU7SzrI4TBhJ0lnMstfobEmekl3hmED/voLzHOMg=
 github.com/metal-stack/duros-go v0.0.0-20201208133557-92505ba046b9 h1:0EIMY0svuB8VBG991Hnwu0JBsf3nEsrq/dXXtvMHgMQ=
 github.com/metal-stack/duros-go v0.0.0-20201208133557-92505ba046b9/go.mod h1:LMGXU7SzrI4TBhJ0lnMstfobEmekl3hmED/voLzHOMg=
+github.com/metal-stack/duros-go v0.0.0-20201208143156-29e7483921aa h1:lSRdmhnCL37vjZ2UOg69pos5EhbJg2KsqLbdMwgjOM0=
+github.com/metal-stack/duros-go v0.0.0-20201208143156-29e7483921aa/go.mod h1:LMGXU7SzrI4TBhJ0lnMstfobEmekl3hmED/voLzHOMg=
 github.com/metal-stack/v v1.0.2 h1:IGtLAGtazQd8r0i/5+YNjBJUEIZYrbVxynY9EXrlTV4=
 github.com/metal-stack/v v1.0.2/go.mod h1:YTahEu7/ishwpYKnp/VaW/7nf8+PInogkfGwLcGPdXg=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
