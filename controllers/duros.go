@@ -35,7 +35,7 @@ func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID
 }
 
 func (r *DurosReconciler) createProjectCredentialsIfNotExist(ctx context.Context, projectID string, adminKey []byte) (*durosv2.Credential, error) {
-	id := projectID
+	id := "root"
 	cred, err := r.DurosClient.GetCredential(ctx, &durosv2.GetCredentialRequest{ID: id, ProjectName: projectID})
 	if err != nil {
 		s, ok := status.FromError(err)
@@ -43,7 +43,8 @@ func (r *DurosReconciler) createProjectCredentialsIfNotExist(ctx context.Context
 			return nil, fmt.Errorf("unable to parse duros error")
 		}
 		switch s.Code() {
-		case codes.NotFound:
+		// FIXME is InvalidArgument a good idea here
+		case codes.NotFound, codes.InvalidArgument:
 			// create credential
 			key, err := extract(adminKey)
 			if err != nil {

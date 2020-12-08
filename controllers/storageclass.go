@@ -642,7 +642,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 	log.Info("deploy storage-class-secret")
 
 	tokenLifetime := 360 * 24 * time.Hour
-	token, err := duros.NewJWTTokenForCredential(credential, []string{credential.ProjectName + ":admin"}, tokenLifetime, key)
+	token, err := duros.NewJWTTokenForCredential("created by duros-controller", credential, []string{credential.ProjectName + ":admin"}, tokenLifetime, key)
 	if err != nil {
 		return fmt.Errorf("unable to create jwt token:%v", err)
 	}
