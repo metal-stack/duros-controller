@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: duros-controller
+  name: duros
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duros-controller
+  namespace: duros
+  labels:
+    control-plane: duros-controller
+spec:
+  selector:
+    matchLabels:
+      control-plane: duros-controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: duros-controller
+    spec:
+      containers:
+      - name: duros-controller
+        args:
+          - -endpoints=10.131.44.2:443
+          - -namespace=duros
+          - -enable-leader-election
+          - -admin-token=/duros/admin-token
+          - -admin-key=/duros/admin-key
+        image: ghcr.io/metal-stack/duros-controller:latest
+        imagePullPolicy: Always
+        env:
+          - name: GRPC_TRACE
+            value: all
+          - name: GRPC_VERBOSITY
+            value: DEBUG
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+        volumeMounts:
+          - name: duros-admin-token
+            mountPath: /duros
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: duros-admin-token
+          secret:
+            secretName: duros-admin-secrets
+
+
