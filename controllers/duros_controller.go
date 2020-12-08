@@ -97,12 +97,6 @@ func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		return requeue, err
 	}
-	// Deploy required ClusterwideNetworkPolicy
-	err = r.deployClusterWideNetworkPolicy(ctx, r.Endpoints)
-	if err != nil {
-		return requeue, err
-	}
-
 	return ctrl.Result{}, nil
 }
 
