@@ -625,6 +625,8 @@ var (
 			"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
 			"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
 			"csi.storage.k8s.io/node-publish-secret-namespace":       namespace,
+			"csi.storage.k8s.io/node-stage-secret-name":              storageClassCredentialsRef,
+			"csi.storage.k8s.io/node-stage-secret-namespace":         namespace,
 			"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
 			"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 			"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
