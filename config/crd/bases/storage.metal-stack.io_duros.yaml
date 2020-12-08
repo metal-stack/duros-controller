@@ -46,7 +46,15 @@ spec:
                 description: Replicas defines for which replicas a storageclass should
                   be deployed
                 items:
-                  type: string
+                  properties:
+                    count:
+                      type: integer
+                    name:
+                      type: string
+                  required:
+                  - count
+                  - name
+                  type: object
                 type: array
             type: object
           status:

@@ -18,14 +18,11 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,12 +39,12 @@ const (
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *runtime.Scheme
-	Namespace    string
-	DurosClient  durosv2.DurosAPIClient
-	DurosContext context.Context
-	Endpoints    duros.EPs
+	Log         logr.Logger
+	Scheme      *runtime.Scheme
+	Namespace   string
+	DurosClient durosv2.DurosAPIClient
+	Endpoints   duros.EPs
+	AdminKey    []byte
 }
 
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros,verbs=get;list;watch;create;update;patch;delete
@@ -75,35 +72,23 @@ func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	var adminKeySecret v1.Secret
-	if err := r.Get(ctx, types.NamespacedName{Name: lbs.Spec.AdminKeySecretRef, Namespace: r.Namespace}, &adminKeySecret); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("no adminkey secret found")
-			return requeue, err
-		}
-	}
-	adminKey, ok := adminKeySecret.Data["adminKey"]
-	if !ok {
-		return requeue, fmt.Errorf("no adminKey found in adminKeySecret")
-	}
-
 	projectID := lbs.Spec.MetalProjectID
 	replicas := lbs.Spec.Replicas
 
-	p, err := r.createProjectIfNotExist(r.DurosContext, projectID)
+	p, err := r.createProjectIfNotExist(ctx, projectID)
 	if err != nil {
 		return requeue, err
 	}
 	log.Info("created project", "name", p.Name)
 
-	cred, err := r.createProjectCredentialsIfNotExist(r.DurosContext, projectID, adminKey)
+	cred, err := r.createProjectCredentialsIfNotExist(ctx, projectID, r.AdminKey)
 	if err != nil {
 		return requeue, err
 	}
 	log.Info("created credential", "id", cred.ID, "project", cred.ProjectName)
 
 	// Deploy StorageClass Secret
-	err = r.deployStorageClassSecret(ctx, cred, adminKey)
+	err = r.deployStorageClassSecret(ctx, cred, r.AdminKey)
 	if err != nil {
 		return requeue, err
 	}

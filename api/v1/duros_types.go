@@ -30,7 +30,7 @@ type DurosSpec struct {
 
 	MetalProjectID string `json:"metal_project_id,omitempty"`
 	// Replicas defines for which replicas a storageclass should be deployed
-	Replicas []string `json:"replicas,omitempty"`
+	Replicas []Replica `json:"replicas,omitempty"`
 	// AdminKeySecretRef points to the secret where the duros admin key is stored
 	AdminKeySecretRef string `json:"adminKeySecretRef,omitempty"`
 }
@@ -60,6 +60,11 @@ type DurosList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Duros `json:"items"`
+}
+
+type Replica struct {
+	Name  string `json:"name"`
+	Count int8   `json:"count"`
 }
 
 func init() {

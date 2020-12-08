@@ -9,6 +9,7 @@ import (
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
+	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
@@ -660,7 +661,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 	return err
 }
 
-func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID string, replicas []string) error {
+func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID string, replicas []storagev1.Replica) error {
 	log := r.Log.WithName("storage-class")
 	log.Info("deploy storage-class")
 
@@ -722,8 +723,8 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		return err
 	}
 
-	for _, replicas := range replicas {
-		storageClassName := "lightbits-" + replicas + "-replica"
+	for _, replica := range replicas {
+		storageClassName := replica.Name
 		storageClassTemplate.ObjectMeta = metav1.ObjectMeta{Name: storageClassName}
 		storageClassTemplate.Parameters["mgmt-endpoint"] = r.Endpoints.String()
 		storageClassTemplate.Parameters["project-name"] = projectID

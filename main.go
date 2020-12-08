@@ -55,6 +55,7 @@ func main() {
 		metricsAddr          string
 		enableLeaderElection bool
 		adminToken           string
+		adminKey             string
 		endpoints            string
 		namespace            string
 	)
@@ -63,7 +64,8 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&namespace, "namespace", "default", "The namespace this controller is running.")
-	flag.StringVar(&adminToken, "admin-token", "/admin-token", "The admin token file for the duros api.")
+	flag.StringVar(&adminToken, "admin-token", "/duros/admin-token", "The admin token file for the duros api.")
+	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
 	flag.Parse()
 
@@ -105,7 +107,11 @@ func main() {
 		setupLog.Error(err, "unable to read admin-token from file")
 		panic(err)
 	}
-
+	ak, err := ioutil.ReadFile(adminKey)
+	if err != nil {
+		setupLog.Error(err, "unable to read admin-key from file")
+		panic(err)
+	}
 	ctx := context.Background()
 	durosEPs := duros.MustParseCSV(endpoints)
 	durosClient, err := duros.Dial(ctx, durosEPs, duros.GRPCS, string(at), zap.NewRaw().Sugar())
@@ -125,13 +131,13 @@ func main() {
 	}
 	setupLog.Info("connected", "duros version", version.ApiVersion, "cluster", cinfo.ApiEndpoints)
 	if err = (&controllers.DurosReconciler{
-		Client:       mgr.GetClient(),
-		Log:          ctrl.Log.WithName("controllers").WithName("LightBits"),
-		Scheme:       mgr.GetScheme(),
-		Namespace:    namespace,
-		DurosClient:  durosClient,
-		Endpoints:    durosEPs,
-		DurosContext: ctx,
+		Client:      mgr.GetClient(),
+		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
+		Scheme:      mgr.GetScheme(),
+		Namespace:   namespace,
+		DurosClient: durosClient,
+		Endpoints:   durosEPs,
+		AdminKey:    ak,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LightBits")
 		os.Exit(1)

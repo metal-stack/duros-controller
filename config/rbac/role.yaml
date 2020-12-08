@@ -4,7 +4,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: duros-controller-role
+  name: manager-role
 rules:
 - apiGroups:
   - apiextensions.k8s.io
@@ -38,17 +38,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - events
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
