@@ -1,6 +1,6 @@
 # duros-controller
 
-A Bridge between cloud-native and duros storage controller. This controller is responsible to create a project in the dorus-api and an authentication token to access the duros storage.
+A Bridge between cloud-native and duros storage controller. This controller is responsible to create a project in the duros-api and an authentication token to access the duros storage.
 After the authentication token is created, it creates a storage class deployment in the shoot which itself authenticates against the duros storage to create/delete PV and mount them.
 
 ## Architecture
