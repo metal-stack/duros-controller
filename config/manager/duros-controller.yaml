@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: duros-controller
+  name: duros
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: duros-admin-secrets
+  namespace: duros
+stringData:
+  admin-token: <the Duros JWT Token with admin privileges"
+data:
+  admin-key: <base64 encoded Duros ADMIN Key>
+  shoot-kubeconfig: <base64 encoded kubeconfig of the target cluster e.g. shoot>
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duros-controller
+  namespace: duros
+  labels:
+    control-plane: duros-controller
+spec:
+  selector:
+    matchLabels:
+      control-plane: duros-controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: duros-controller
+    spec:
+      containers:
+      - name: duros-controller
+        args:
+          - -endpoints=10.131.44.2:443
+          - -namespace=duros
+          - -enable-leader-election
+          - -admin-token=/duros/admin-token
+          - -admin-key=/duros/admin-key
+          - -shoot-kubeconfig=/duros/shoot-kubeconfig
+        image: ghcr.io/metal-stack/duros-controller:latest
+        imagePullPolicy: Always
+        env:
+          - name: GRPC_TRACE
+            value: all
+          - name: GRPC_VERBOSITY
+            value: DEBUG
+        resources:
+          requests:
+            cpu: 100m
+            memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
+        volumeMounts:
+          - name: duros-admin-token
+            mountPath: /duros
+      terminationGracePeriodSeconds: 10
+      volumes:
+        - name: duros-admin-token
+          secret:
+            secretName: duros-admin-secrets
+
+

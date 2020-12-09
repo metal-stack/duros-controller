@@ -1,0 +1,16 @@
+apiVersion: metal-stack.io/v1
+kind: ClusterwideNetworkPolicy
+metadata:
+  name: allow-to-storage
+  namespace: firewall
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 4420
+      protocol: TCP
+    - port: 8009
+      protocol: TCP
+    to:
+    - cidr: 10.128.0.0/14

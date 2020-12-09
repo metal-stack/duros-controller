@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example-mt-pod
+spec:
+  containers:
+  - name: busybox-date-container
+    imagePullPolicy: IfNotPresent
+    image: busybox
+    command: ["/bin/sh"]
+    args: ["-c", "if [ -f /mnt/test/hostname ] ; then (md5sum -s -c /mnt/test/hostname.md5 && echo OLD MD5 OK || echo BAD OLD MD5) >> /mnt/test/log ; fi ; echo $KUBE_NODE_NAME: $(date +%Y-%m-%d.%H-%M-%S) >| /mnt/test/hostname ; md5sum /mnt/test/hostname >| /mnt/test/hostname.md5 ; echo NEW NODE: $KUBE_NODE_NAME: $(date +%Y-%m-%d.%H-%M-%S) >> /mnt/test/log ; while true ; do date +%Y-%m-%d.%H-%M-%S >| /mnt/test/date ; sleep 10 ; done" ]
+    env:
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    stdin: true
+    tty: true
+    volumeMounts:
+    - name: test-mnt
+      mountPath: "/mnt/test"
+  volumes:
+  - name: test-mnt
+    persistentVolumeClaim:
+      claimName: example-mt-pvc

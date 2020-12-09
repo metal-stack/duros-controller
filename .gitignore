@@ -1,0 +1,6 @@
+api/google/*
+api/protoc-gen-swagger/*
+api/duros/*
+api/durosv2/*
+bin/
+**/*/statik.go

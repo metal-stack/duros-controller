@@ -1,0 +1,15 @@
+---
+apiVersion: storage.metal-stack.io/v1
+kind: Duros
+metadata:
+  namespace: duros
+  name: sample
+spec:
+  metalProjectID: 5820c4e7-fbd4-4e4b-a40b-2b83eb34bbe3
+  storageClasses:
+    - name: partition-silver
+      replicas: 2
+      compression: true
+    - name: partition-gold
+      replicas: 3
+      compression: true
