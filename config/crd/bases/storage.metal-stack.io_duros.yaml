@@ -16,7 +16,14 @@ spec:
     singular: duros
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.metalProjectID
+      name: ProjectID
+      type: string
+    - jsonPath: .spec.replicas
+      name: Replicas
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: Duros is the Schema for the Duros API
@@ -36,22 +43,23 @@ spec:
           spec:
             description: DurosSpec defines the desired state of Duros
             properties:
-              adminKeySecretRef:
-                description: AdminKeySecretRef points to the secret where the duros
-                  admin key is stored
-                type: string
-              metal_project_id:
+              metalProjectID:
+                description: MetalProjectID is the projectID of this deployment
                 type: string
               replicas:
                 description: Replicas defines for which replicas a storageclass should
                   be deployed
                 items:
+                  description: Replica defines the storageClass parameters
                   properties:
+                    compression:
+                      type: boolean
                     count:
                       type: integer
                     name:
                       type: string
                   required:
+                  - compression
                   - count
                   - name
                   type: object
@@ -61,14 +69,14 @@ spec:
             description: DurosStatus defines the observed state of Duros
             properties:
               secret:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
+                description: SecretRef to the create JWT Token TODO, this can be used
+                  to detect required key rotation
                 type: string
             type: object
         type: object
     served: true
     storage: true
+    subresources: {}
 status:
   acceptedNames:
     kind: ""

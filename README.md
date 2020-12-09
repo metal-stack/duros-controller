@@ -19,7 +19,7 @@ There are several use cases during the lifecycle of storage consumed by customer
 ### First usage from a tenants project
 
 There was no storage usage from a project before, e.g. because the customer created a new project and then a cluster is created.
-Then `gepm` will create the `lbs` CR and deploys the `duros-controller` into the shoot namespace in the seed.
+Then `gepm` will create the `duros` CR and deploys the `duros-controller` into the shoot namespace in the seed.
 The `duros-controller` will check if there is already a project present in the duros-api with the metal-api project ID and create it does not exist.
 A JWT Token with project permission is created and stored as secret in the shoot namespace, the secretref is stored in `lbs.spec`.
 With this a `StorageClass` deployment in the shoot is created.

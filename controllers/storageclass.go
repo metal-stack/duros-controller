@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -25,14 +26,7 @@ import (
 )
 
 const (
-	namespace                   = "kube-system"
-	lbCSIPluginImage            = "docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.2.0"
-	lbDiscoveryClientImage      = "docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.2.0"
-	csiProvisionerImage         = "k8s.gcr.io/sig-storage/csi-provisioner:v1.5.0"
-	csiAttacherImage            = "quay.io/k8scsi/csi-attacher:v2.1.0"
-	csiResizerImage             = "k8s.gcr.io/sig-storage/csi-resizer:v0.5.0"
-	csiNodeDriverRegistrarImage = "k8s.gcr.io/sig-storage/csi-node-driver-registrar:v1.2.0"
-	busyboxImage                = "busybox:1.32"
+	namespace = "kube-system"
 )
 
 var (
@@ -617,10 +611,8 @@ var (
 		Provisioner:          csiDriver.ObjectMeta.Name,
 		AllowVolumeExpansion: boolp(true),
 		Parameters: map[string]string{
-			"mgmt-scheme":   "grpcs",
-			"project-name":  "project-a",
-			"replica-count": "3",
-			"compression":   "enabled",
+			"mgmt-scheme": "grpcs",
+			"compression": "disabled",
 			"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
 			"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
 			"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
@@ -668,10 +660,10 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	log.Info("deploy storage-class")
 
 	var csid storage.CSIDriver
-	err := r.Client.Get(ctx, types.NamespacedName{Name: csiDriver.Name}, &csid)
+	err := r.Shoot.Get(ctx, types.NamespacedName{Name: csiDriver.Name}, &csid)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			err = r.Client.Create(ctx, &csiDriver, &client.CreateOptions{})
+			err = r.Shoot.Create(ctx, &csiDriver, &client.CreateOptions{})
 			if err != nil {
 				log.Error(err, "unable to create csidriver")
 				return err
@@ -730,6 +722,10 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		storageClassTemplate.ObjectMeta = metav1.ObjectMeta{Name: storageClassName}
 		storageClassTemplate.Parameters["mgmt-endpoint"] = r.Endpoints.String()
 		storageClassTemplate.Parameters["project-name"] = projectID
+		storageClassTemplate.Parameters["replica-count"] = strconv.Itoa(int(replica.Count))
+		if replica.Compression {
+			storageClassTemplate.Parameters["compression"] = "enabled"
+		}
 		err = r.createOrUpdate(ctx, log, types.NamespacedName{Name: storageClassName}, &storageClassTemplate)
 		if err != nil {
 			return err
@@ -742,11 +738,11 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj runtime.Object) error {
 	log.Info("create or update", "name", namespacedName.Name)
 	old := obj
-	err := r.Client.Get(ctx, namespacedName, old)
+	err := r.Shoot.Get(ctx, namespacedName, old)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("create", "name", namespacedName.Name)
-			err = r.Client.Create(ctx, obj, &client.CreateOptions{})
+			err = r.Shoot.Create(ctx, obj, &client.CreateOptions{})
 			if err != nil {
 				log.Error(err, "unable to create", "name", namespacedName.Name)
 				return err
@@ -756,13 +752,13 @@ func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, n
 		return err
 	}
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		err := r.Client.Get(ctx, namespacedName, old)
+		err := r.Shoot.Get(ctx, namespacedName, old)
 		if err != nil {
 			log.Error(err, "unable to get", "name", namespacedName.Name)
 			return err
 		}
 		log.Info("update", "name", namespacedName.Name, "old", old.GetObjectKind().GroupVersionKind(), "new", obj.GetObjectKind().GroupVersionKind())
-		err = r.Client.Update(ctx, obj, &client.UpdateOptions{})
+		err = r.Shoot.Update(ctx, obj, &client.UpdateOptions{})
 		if err != nil {
 			log.Error(err, "unable to update", "name", namespacedName.Name)
 			return err

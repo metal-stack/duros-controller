@@ -6,9 +6,11 @@ metadata:
   name: sample
 spec:
   # Add fields here
-  metal_project_id: 5820c4e7-fbd4-4e4b-a40b-2b83eb34bbe1
+  metalProjectID: 5820c4e7-fbd4-4e4b-a40b-2b83eb34bbe3
   replicas:
     - name: partition-storage-gold
       count: 2
-    - name: partition-storage-platin
+      compression: true
+    - name: partition-storage-platinum
       count: 3
+      compression: true

@@ -32,13 +32,10 @@ import (
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 )
 
-const (
-	requeueInterval = time.Second * 10
-)
-
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
 	client.Client
+	Shoot       client.Client
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
 	Namespace   string
@@ -50,13 +47,17 @@ type DurosReconciler struct {
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
-
+// +kubebuilder:rbac:groups=storage.k8s.io,resources=csidrivers;csinodes;volumeattachments;storageclasses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;list;watch;create;update;patch;delete;use
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:apps:groups=policy,resources=statefulsets;daemonsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:apps:groups="",resources=configmaps;events;secrets;serviceaccounts;nodes;persistentvolumes;persistentvolumeclaims;persistentvolumeclaims/status;pods,verbs=get;list;watch;create;update;patch;delete
 // Reconcile the Duros CRD
 func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("duros", req.NamespacedName)
 	requeue := ctrl.Result{
-		RequeueAfter: requeueInterval,
+		RequeueAfter: time.Second * 10,
 	}
 
 	log.Info("running in", "namespace", req.Namespace, "configured for", r.Namespace)
@@ -67,7 +68,7 @@ func (r *DurosReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var lbs storagev1.Duros
 	if err := r.Get(ctx, req.NamespacedName, &lbs); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("no durosstorage defined")
+			log.Info("no duros storage defined")
 			return requeue, err
 		}
 	}

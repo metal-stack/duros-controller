@@ -30,6 +30,7 @@ spec:
           - -enable-leader-election
           - -admin-token=/duros/admin-token
           - -admin-key=/duros/admin-key
+          - -shoot-kubeconfig=/duros/shoot-kubeconfig
         image: ghcr.io/metal-stack/duros-controller:latest
         imagePullPolicy: Always
         env:
@@ -38,12 +39,12 @@ spec:
           - name: GRPC_VERBOSITY
             value: DEBUG
         resources:
-          limits:
-            cpu: 100m
-            memory: 30Mi
           requests:
             cpu: 100m
             memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 50Mi
         volumeMounts:
           - name: duros-admin-token
             mountPath: /duros

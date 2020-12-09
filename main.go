@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	_ "github.com/metal-stack/duros-controller/statik"
 	v2 "github.com/metal-stack/duros-go/api/duros/v2"
 	"github.com/metal-stack/v"
@@ -30,6 +32,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
@@ -54,6 +57,7 @@ func main() {
 	var (
 		metricsAddr          string
 		enableLeaderElection bool
+		shootKubeconfig      string
 		adminToken           string
 		adminKey             string
 		endpoints            string
@@ -64,6 +68,7 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&namespace, "namespace", "default", "The namespace this controller is running.")
+	flag.StringVar(&shootKubeconfig, "shoot-kubeconfig", "", "The path to the kubeconfig to talk to the shoot")
 	flag.StringVar(&adminToken, "admin-token", "/duros/admin-token", "The admin token file for the duros api.")
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
@@ -72,6 +77,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	restConfig := ctrl.GetConfigOrDie()
+
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
@@ -82,6 +88,23 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to start duros-controller")
 		os.Exit(1)
+	}
+
+	shootClient := mgr.GetClient()
+	if len(shootKubeconfig) > 0 {
+		shootRestConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: shootKubeconfig},
+			&clientcmd.ConfigOverrides{},
+		).ClientConfig()
+		if err != nil {
+			setupLog.Error(err, "unable to create shoot restconfig")
+			os.Exit(1)
+		}
+		shootClient, err = client.New(shootRestConfig, client.Options{})
+		if err != nil {
+			setupLog.Error(err, "unable to create shoot client")
+			os.Exit(1)
+		}
 	}
 
 	// Install required CRD
@@ -132,6 +155,7 @@ func main() {
 	setupLog.Info("connected", "duros version", version.ApiVersion, "cluster", cinfo.ApiEndpoints)
 	if err = (&controllers.DurosReconciler{
 		Client:      mgr.GetClient(),
+		Shoot:       shootClient,
 		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
 		Scheme:      mgr.GetScheme(),
 		Namespace:   namespace,

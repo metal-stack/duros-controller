@@ -23,28 +23,10 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// DurosSpec defines the desired state of Duros
-type DurosSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	MetalProjectID string `json:"metal_project_id,omitempty"`
-	// Replicas defines for which replicas a storageclass should be deployed
-	Replicas []Replica `json:"replicas,omitempty"`
-	// AdminKeySecretRef points to the secret where the duros admin key is stored
-	AdminKeySecretRef string `json:"adminKeySecretRef,omitempty"`
-}
-
-// DurosStatus defines the observed state of Duros
-type DurosStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
-}
-
-// +kubebuilder:object:root=true
-
 // Duros is the Schema for the Duros API
+// +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="ProjectID",type=string,JSONPath=`.spec.metalProjectID`
+// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`
 type Duros struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -62,9 +44,26 @@ type DurosList struct {
 	Items           []Duros `json:"items"`
 }
 
+// DurosSpec defines the desired state of Duros
+type DurosSpec struct {
+	// MetalProjectID is the projectID of this deployment
+	MetalProjectID string `json:"metalProjectID,omitempty"`
+	// Replicas defines for which replicas a storageclass should be deployed
+	Replicas []Replica `json:"replicas,omitempty"`
+}
+
+// DurosStatus defines the observed state of Duros
+type DurosStatus struct {
+	// SecretRef to the create JWT Token
+	// TODO, this can be used to detect required key rotation
+	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
+}
+
+// Replica defines the storageClass parameters
 type Replica struct {
-	Name  string `json:"name"`
-	Count int8   `json:"count"`
+	Name        string `json:"name"`
+	Count       int8   `json:"count"`
+	Compression bool   `json:"compression"`
 }
 
 func init() {
