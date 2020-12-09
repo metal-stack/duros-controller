@@ -655,7 +655,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 	return err
 }
 
-func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID string, replicas []storagev1.Replica) error {
+func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID string, scs []storagev1.StorageClass) error {
 	log := r.Log.WithName("storage-class")
 	log.Info("deploy storage-class")
 
@@ -717,13 +717,13 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		return err
 	}
 
-	for _, replica := range replicas {
-		storageClassName := replica.Name
+	for _, sc := range scs {
+		storageClassName := sc.Name
 		storageClassTemplate.ObjectMeta = metav1.ObjectMeta{Name: storageClassName}
 		storageClassTemplate.Parameters["mgmt-endpoint"] = r.Endpoints.String()
 		storageClassTemplate.Parameters["project-name"] = projectID
-		storageClassTemplate.Parameters["replica-count"] = strconv.Itoa(int(replica.Count))
-		if replica.Compression {
+		storageClassTemplate.Parameters["replica-count"] = strconv.Itoa(sc.ReplicaCount)
+		if sc.Compression {
 			storageClassTemplate.Parameters["compression"] = "enabled"
 		}
 		err = r.createOrUpdate(ctx, log, types.NamespacedName{Name: storageClassName}, &storageClassTemplate)

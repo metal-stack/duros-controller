@@ -26,7 +26,7 @@ import (
 // Duros is the Schema for the Duros API
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="ProjectID",type=string,JSONPath=`.spec.metalProjectID`
-// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`
+// +kubebuilder:printcolumn:name="StorageClasses",type=string,JSONPath=`.spec.storageClasses`
 type Duros struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -48,8 +48,8 @@ type DurosList struct {
 type DurosSpec struct {
 	// MetalProjectID is the projectID of this deployment
 	MetalProjectID string `json:"metalProjectID,omitempty"`
-	// Replicas defines for which replicas a storageclass should be deployed
-	Replicas []Replica `json:"replicas,omitempty"`
+	// StorageClasses defines what storageclasses should be deployed
+	StorageClasses []StorageClass `json:"storageClasses,omitempty"`
 }
 
 // DurosStatus defines the observed state of Duros
@@ -59,11 +59,11 @@ type DurosStatus struct {
 	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
 }
 
-// Replica defines the storageClass parameters
-type Replica struct {
-	Name        string `json:"name"`
-	Count       int8   `json:"count"`
-	Compression bool   `json:"compression"`
+// StorageClass defines the storageClass parameters
+type StorageClass struct {
+	Name         string `json:"name"`
+	ReplicaCount int    `json:"replicas"`
+	Compression  bool   `json:"compression"`
 }
 
 func init() {

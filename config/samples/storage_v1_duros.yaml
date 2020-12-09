@@ -7,10 +7,10 @@ metadata:
 spec:
   # Add fields here
   metalProjectID: 5820c4e7-fbd4-4e4b-a40b-2b83eb34bbe3
-  replicas:
+  storageClasses:
     - name: partition-storage-gold
-      count: 2
+      replicas: 2
       compression: true
     - name: partition-storage-platinum
-      count: 3
+      replicas: 3
       compression: true
