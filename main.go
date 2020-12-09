@@ -83,7 +83,8 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "99f32e9a.metal-stack.io",
+		LeaderElectionID:   "duros-controller-leader-election",
+		Namespace:          namespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start duros-controller")
