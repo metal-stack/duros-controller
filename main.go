@@ -121,7 +121,13 @@ func main() {
 	}
 	ctx := context.Background()
 	durosEPs := duros.MustParseCSV(endpoints)
-	durosClient, err := duros.Dial(ctx, durosEPs, duros.GRPCS, string(at), zap.NewRaw().Sugar())
+	durosConfig := duros.DialConfig{
+		Token:     string(at),
+		Endpoints: durosEPs,
+		Scheme:    duros.GRPCS,
+		Log:       zap.NewRaw().Sugar(),
+	}
+	durosClient, err := duros.Dial(ctx, durosConfig)
 	if err != nil {
 		setupLog.Error(err, "problem running duros-controller")
 		panic(err)
