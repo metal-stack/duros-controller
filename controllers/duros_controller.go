@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
 	core "k8s.io/api/core/v1"
 	storage "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,7 +41,6 @@ import (
 type DurosReconciler struct {
 	client.Client
 	Shoot       client.Client
-	Log         logr.Logger
 	Scheme      *runtime.Scheme
 	Namespace   string
 	DurosClient durosv2.DurosAPIClient
@@ -58,7 +58,7 @@ type DurosReconciler struct {
 // +kubebuilder:apps:groups=policy,resources=statefulsets;daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:apps:groups="",resources=configmaps;events;secrets;serviceaccounts;nodes;persistentvolumes;persistentvolumeclaims;persistentvolumeclaims/status;pods,verbs=get;list;watch;create;update;patch;delete
 func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("duros", req.NamespacedName)
+	log := log.FromContext(ctx).WithValues("duros", req.NamespacedName)
 	requeue := ctrl.Result{
 		RequeueAfter: time.Second * 10,
 	}

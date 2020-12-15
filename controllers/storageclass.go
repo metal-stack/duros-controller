@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
@@ -631,7 +632,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 	if err != nil {
 		return err
 	}
-	log := r.Log.WithName("storage-class")
+	log := log.FromContext(ctx).WithName("storage-class")
 	log.Info("deploy storage-class-secret")
 
 	tokenLifetime := 360 * 24 * time.Hour
@@ -648,14 +649,14 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 		},
 	}
 
-	err = r.createOrUpdate(ctx, log,
+	err = r.createOrUpdate(ctx,
 		types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace},
 		&storageClassSecret)
 	return err
 }
 
 func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID string, scs []storagev1.StorageClass) error {
-	log := r.Log.WithName("storage-class")
+	log := log.FromContext(ctx).WithName("storage-class")
 	log.Info("deploy storage-class")
 
 	var csid storage.CSIDriver
@@ -673,34 +674,34 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	}
 
 	for _, psp := range psps {
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: psp.Name, Namespace: psp.Namespace}, &psp)
+		err := r.createOrUpdate(ctx, types.NamespacedName{Name: psp.Name, Namespace: psp.Namespace}, &psp)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, sa := range serviceAccounts {
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace}, &sa)
+		err := r.createOrUpdate(ctx, types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace}, &sa)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, cr := range clusterRoles {
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: cr.Name}, &cr)
+		err := r.createOrUpdate(ctx, types.NamespacedName{Name: cr.Name}, &cr)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, crb := range clusterRoleBindings {
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: crb.Name}, &crb)
+		err := r.createOrUpdate(ctx, types.NamespacedName{Name: crb.Name}, &crb)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = r.createOrUpdate(ctx, log,
+	err = r.createOrUpdate(ctx,
 		types.NamespacedName{Name: csiControllerStatefulSet.Name, Namespace: csiControllerStatefulSet.Namespace},
 		&csiControllerStatefulSet,
 	)
@@ -708,7 +709,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		return err
 	}
 
-	err = r.createOrUpdate(ctx, log,
+	err = r.createOrUpdate(ctx,
 		types.NamespacedName{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace},
 		&csiNodeDaemonSet,
 	)
@@ -725,7 +726,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		if sc.Compression {
 			storageClassTemplate.Parameters["compression"] = "enabled"
 		}
-		err = r.createOrUpdate(ctx, log, types.NamespacedName{Name: storageClassName}, &storageClassTemplate)
+		err = r.createOrUpdate(ctx, types.NamespacedName{Name: storageClassName}, &storageClassTemplate)
 		if err != nil {
 			return err
 		}
@@ -734,7 +735,8 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	return nil
 }
 
-func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj client.Object) error {
+func (r *DurosReconciler) createOrUpdate(ctx context.Context, namespacedName types.NamespacedName, obj client.Object) error {
+	log := log.FromContext(ctx).WithName("storage-class")
 	log.Info("create or update", "name", namespacedName.Name)
 	old := obj
 	err := r.Shoot.Get(ctx, namespacedName, old)
