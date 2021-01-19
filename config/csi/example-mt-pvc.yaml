@@ -1,12 +1,26 @@
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: example-mt-pvc
 spec:
-  storageClassName: example-mt-sc
+  storageClassName: partition-gold
   accessModes:
   - ReadWriteOnce
   volumeMode: Filesystem
   resources:
     requests:
       storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: example-mt-pvc-2
+spec:
+  storageClassName: partition-silver
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 20Gi

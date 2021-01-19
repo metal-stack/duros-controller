@@ -14,6 +14,13 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: spec.nodeName
+    resources:
+        requests:
+          cpu: 100m
+          memory: 100m
+        limits:
+          cpu: 100m
+          memory: 100m
     stdin: true
     tty: true
     volumeMounts:
@@ -23,3 +30,6 @@ spec:
   - name: test-mnt
     persistentVolumeClaim:
       claimName: example-mt-pvc
+  - name: test-mnt-2
+    persistentVolumeClaim:
+      claimName: example-mt-pvc-2
