@@ -21,6 +21,7 @@ func (r *DurosReconciler) createProjectIfNotExist(ctx context.Context, projectID
 		if !ok {
 			return nil, fmt.Errorf("unable to parse duros error")
 		}
+		//nolint
 		switch s.Code() {
 		case codes.NotFound:
 			p, err = r.DurosClient.CreateProject(ctx, &durosv2.CreateProjectRequest{Name: projectID})
@@ -42,6 +43,7 @@ func (r *DurosReconciler) createProjectCredentialsIfNotExist(ctx context.Context
 		if !ok {
 			return nil, fmt.Errorf("unable to parse duros error")
 		}
+		//nolint
 		switch s.Code() {
 		// FIXME is InvalidArgument a good idea here
 		case codes.NotFound, codes.InvalidArgument:
@@ -52,7 +54,7 @@ func (r *DurosReconciler) createProjectCredentialsIfNotExist(ctx context.Context
 			}
 			pubkeyBytes, err := publicKeyToBytes(&key.PublicKey)
 			if err != nil {
-				return nil, fmt.Errorf("unable to convert adminKey public key into pem encoded byte slice:%v", err)
+				return nil, fmt.Errorf("unable to convert adminKey public key into pem encoded byte slice:%w", err)
 			}
 			// Regarding  CreateCredentialRequest.Payload:
 			// there are 3 entities at play here:
@@ -90,7 +92,7 @@ func extract(adminKey []byte) (*rsa.PrivateKey, error) {
 	}
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse RSA key pair: %s", err)
+		return nil, fmt.Errorf("failed to parse RSA key pair: %w", err)
 	}
 	return key, nil
 }

@@ -638,7 +638,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 	tokenLifetime := 360 * 24 * time.Hour
 	token, err := duros.NewJWTTokenForCredential(r.Namespace, "duros-controller", credential, []string{credential.ProjectName + ":admin"}, tokenLifetime, key)
 	if err != nil {
-		return fmt.Errorf("unable to create jwt token:%v", err)
+		return fmt.Errorf("unable to create jwt token:%w", err)
 	}
 
 	storageClassSecret := v1.Secret{
@@ -673,28 +673,32 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		}
 	}
 
-	for _, psp := range psps {
+	for i := range psps {
+		psp := psps[i]
 		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: psp.Name, Namespace: psp.Namespace}, &psp)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, sa := range serviceAccounts {
+	for i := range serviceAccounts {
+		sa := serviceAccounts[i]
 		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace}, &sa)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, cr := range clusterRoles {
+	for i := range clusterRoles {
+		cr := clusterRoles[i]
 		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: cr.Name}, &cr)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, crb := range clusterRoleBindings {
+	for i := range clusterRoleBindings {
+		crb := clusterRoleBindings[i]
 		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: crb.Name}, &crb)
 		if err != nil {
 			return err
