@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -739,7 +738,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	return nil
 }
 
-func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj runtime.Object) error {
+func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj client.Object) error {
 	log.Info("create or update", "name", namespacedName.Name)
 	old := obj
 	err := r.Shoot.Get(ctx, namespacedName, old)
