@@ -260,11 +260,94 @@ var (
 			},
 		},
 	}
+
+	snapshotClusterRole = rbac.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "snapshot-controller-runner",
+		},
+		Rules: []rbac.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumes"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"get", "list", "watch", "update"},
+			},
+			{
+				APIGroups: []string{"storage.k8s.io"},
+				Resources: []string{"storageclasses"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"list", "watch", "create", "update", "patch"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotclasses"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotcontents"},
+				Verbs:     []string{"create", "get", "list", "watch", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshots"},
+				Verbs:     []string{"get", "list", "watch", "update"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshots/status"},
+				Verbs:     []string{"update"},
+			},
+		},
+	}
+	externalSnapshotterClusterRole = rbac.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "external-snapshotter-runner",
+		},
+		Rules: []rbac.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"list", "watch", "create", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get", "list"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotclasses"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotcontents"},
+				Verbs:     []string{"create", "get", "list", "watch", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshotcontents/status"},
+				Verbs:     []string{"update"},
+			},
+		},
+	}
+
 	clusterRoles = []rbac.ClusterRole{
 		nodeClusterRole,
 		attacherClusterRole,
 		ctrlClusterRole,
 		resizerClusterRole,
+		snapshotClusterRole,
+		externalSnapshotterClusterRole,
 	}
 
 	ctrlClusterRoleBinding = rbac.ClusterRoleBinding{
@@ -320,11 +403,47 @@ var (
 			APIGroup: resizerClusterRole.APIVersion,
 		},
 	}
+	snapshotClusterRoleBinding = rbac.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "snapshot-controller-role",
+		},
+		Subjects: []rbac.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      ctrlServiceAccount.Name,
+				Namespace: ctrlServiceAccount.Namespace,
+			},
+		},
+		RoleRef: rbac.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     snapshotClusterRole.Name,
+			APIGroup: snapshotClusterRole.APIVersion,
+		},
+	}
+	externalSnapshotterClusterRoleBinding = rbac.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "csi-snapshotter-role",
+		},
+		Subjects: []rbac.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      ctrlServiceAccount.Name,
+				Namespace: ctrlServiceAccount.Namespace,
+			},
+		},
+		RoleRef: rbac.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     externalSnapshotterClusterRole.Name,
+			APIGroup: externalSnapshotterClusterRole.APIVersion,
+		},
+	}
 	clusterRoleBindings = []rbac.ClusterRoleBinding{
 		nodeClusterRoleBinding,
 		attacherClusterRoleBinding,
 		ctrlClusterRoleBinding,
 		resizerClusterRoleBinding,
+		snapshotClusterRoleBinding,
+		externalSnapshotterClusterRoleBinding,
 	}
 
 	// ResourceLimits
@@ -394,6 +513,26 @@ var (
 		Image:           csiResizerImage,
 		ImagePullPolicy: v1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4"},
+		Env: []v1.EnvVar{
+			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
+		},
+		VolumeMounts: []v1.VolumeMount{
+			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
+		},
+		Resources: defaultResourceLimits,
+	}
+	snapshotControllerContainer = v1.Container{
+		Name:            "snapshot-controller",
+		Image:           snapshotControllerImage,
+		ImagePullPolicy: v1.PullIfNotPresent,
+		Args:            []string{"--leader-election=false", "--v=5"},
+		Resources:       defaultResourceLimits,
+	}
+	csiSnapshotterContainer = v1.Container{
+		Name:            "csi-snapshotter",
+		Image:           csiSnapshotterImage,
+		ImagePullPolicy: v1.PullIfNotPresent,
+		Args:            []string{"--csi-address=$(ADDRESS)", "--leader-election=false", "--v=5"},
 		Env: []v1.EnvVar{
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
@@ -561,6 +700,8 @@ var (
 						csiProvisionerContainer,
 						csiAttacherContainer,
 						csiResizerContainer,
+						snapshotControllerContainer,
+						csiSnapshotterContainer,
 					},
 					ServiceAccountName: ctrlServiceAccount.Name,
 					PriorityClassName:  "system-cluster-critical",

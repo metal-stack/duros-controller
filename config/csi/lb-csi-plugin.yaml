@@ -48,6 +48,98 @@ rules:
 
 ---
 
+# Taken from: https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  # rename if there are conflicts
+  name: snapshot-controller-runner
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["create", "get", "list", "watch", "update", "delete"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots/status"]
+    verbs: ["update"]
+---
+# Source: lb-csi-plugin/templates/snapshot-rbac.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  # rename if there are conflicts
+  name: external-snapshotter-runner
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  # Secret permission is optional.
+  # Enable it if your driver needs secret.
+  # For example, `csi.storage.k8s.io/snapshotter-secret-name` is set in VolumeSnapshotClass.
+  # See https://kubernetes-csi.github.io/docs/secrets-and-credentials.html for more details.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["create", "get", "list", "watch", "update", "delete"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents/status"]
+    verbs: ["update"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: snapshot-controller-role
+subjects:
+  - kind: ServiceAccount
+    name: lb-csi-ctrl-sa
+
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  # change the name also here if the ClusterRole gets renamed
+  name: snapshot-controller-runner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-snapshotter-role
+subjects:
+  - kind: ServiceAccount
+    name: lb-csi-ctrl-sa
+
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  # change the name also here if the ClusterRole gets renamed
+  name: external-snapshotter-runner
+  apiGroup: rbac.authorization.k8s.io
+
+---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -62,7 +154,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
-
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -164,7 +255,7 @@ spec:
         - name: lb-csi-plugin
           # if hosting the plugin in a different registry, e.g. a local private
           # Docker registry, modify the image identifier below accordingly:
-          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.2.0
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.0
           args :
             - "-P"
           env:
@@ -300,7 +391,7 @@ spec:
         - name: lb-csi-plugin
           # if hosting the plugin in a different registry, e.g. a local private
           # Docker registry, modify the image identifier below accordingly:
-          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.2.0
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.0
           args :
             - "-P"
           env:
@@ -374,7 +465,7 @@ spec:
         - name: lb-nvme-discovery-client
           # if hosting the plugin in a different registry, e.g. a local private
           # Docker registry, modify the image identifier below accordingly:
-          image: docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.2.0
+          image: docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.4.0
           imagePullPolicy: "Always"
           securityContext:
             privileged: true
@@ -407,3 +498,133 @@ spec:
             path: /lib/modules
         - name: discovery-client-dir
           emptyDir: {}
+
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: lb-csi-controller
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: lb-csi-plugin
+      role: controller
+  serviceName: "lb-csi-ctrl-svc"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: lb-csi-plugin
+        role: controller
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: lb-csi-ctrl-sa
+      containers:
+        - name: lb-csi-plugin
+          # if hosting the plugin in a different registry, e.g. a local private
+          # Docker registry, modify the image identifier below accordingly:
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.0
+          args :
+            - "-P"
+          env:
+          - name: CSI_ENDPOINT
+            value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+          - name: KUBE_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: LB_CSI_NODE_ID
+            value: $(KUBE_NODE_NAME).ctrl
+          - name: LB_CSI_LOG_LEVEL
+            value: debug
+          - name: LB_CSI_LOG_ROLE
+            value: controller
+          - name: LB_CSI_LOG_FMT
+            value: text
+          - name: LB_CSI_LOG_TIME
+            value: "true"
+          imagePullPolicy: "Always"
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/csi/sockets/pluginproxy/
+          # to inject jwt from secret using volume mount uncomment
+          # the following. Will create file under /etc/lb-csi/jwt with jwt value
+          # in secret named `los-secret`
+          # - name: lb-csi-secret-vol
+          #   mountPath: "/etc/lb-csi"
+        - name: csi-provisioner
+          # if hosting the K8s CSI plugin sidecar container images in a
+          # different registry, e.g. a local private Docker registry,
+          # modify the image identifier below accordingly:
+          image: quay.io/k8scsi/csi-provisioner:v1.5.0
+          args:
+          - "--csi-address=$(ADDRESS)"
+          - "--v=4"
+          env:
+          - name: ADDRESS
+            value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-attacher
+          # if hosting the K8s CSI plugin sidecar container images in a
+          # different registry, e.g. a local private Docker registry,
+          # modify the image identifier below accordingly:
+          image: quay.io/k8scsi/csi-attacher:v2.1.0
+          args:
+          - "--v=4"
+          - "--csi-address=$(ADDRESS)"
+          env:
+          - name: ADDRESS
+            value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: csi-resizer
+          image: quay.io/k8scsi/csi-resizer:v0.5.0
+          args:
+          - "--v=5"
+          - "--csi-address=$(ADDRESS)"
+          env:
+          - name: ADDRESS
+            value: unix:///var/lib/csi/sockets/pluginproxy/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/csi/sockets/pluginproxy/
+        - name: snapshot-controller
+          image: quay.io/k8scsi/snapshot-controller:v4.0.0
+          args:
+          - "--v=5"
+          - "--leader-election=false"
+          imagePullPolicy: Always
+        - name: csi-snapshotter
+          image: quay.io/k8scsi/csi-snapshotter:v4.0.0
+          args:
+          - "--v=5"
+          - "--csi-address=$(ADDRESS)"
+          - "--leader-election=false"
+          env:
+          - name: ADDRESS
+            value: /var/lib/csi/sockets/pluginproxy/csi.sock
+          imagePullPolicy: Always
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/csi/sockets/pluginproxy/
+      volumes:
+        - name: socket-dir
+          emptyDir: {}
+        # - name: lb-csi-secret-vol
+        #   secret:
+        #     secretName: los-secret
+        #     items:
+        #     - key: jwt
+        #       path: jwt
+        #       mode: 0777
+      # to enable seamless access to secure private Docker registries (e.g. to
+      # `docker.lightbitslabs.com/lightos-k8s`), create a k8s secret with
+      # the corresponding credentials and reference it in an `imagePullSecrets`
+      # clause here, as an immediate descendant of `spec.template.spec`:
+      #imagePullSecrets:
+      #- name: my-docker-registry-credentials-secret
