@@ -359,6 +359,10 @@ spec:
     matchLabels:
       app: lb-csi-plugin
       role: node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   template:
     metadata:
       labels:
@@ -391,7 +395,7 @@ spec:
         - name: lb-csi-plugin
           # if hosting the plugin in a different registry, e.g. a local private
           # Docker registry, modify the image identifier below accordingly:
-          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.0
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.1
           args :
             - "-P"
           env:
@@ -465,7 +469,7 @@ spec:
         - name: lb-nvme-discovery-client
           # if hosting the plugin in a different registry, e.g. a local private
           # Docker registry, modify the image identifier below accordingly:
-          image: docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.4.0
+          image: docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.4.1
           imagePullPolicy: "Always"
           securityContext:
             privileged: true
@@ -524,7 +528,7 @@ spec:
         - name: lb-csi-plugin
           # if hosting the plugin in a different registry, e.g. a local private
           # Docker registry, modify the image identifier below accordingly:
-          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.0
+          image: docker.lightbitslabs.com/lightos-csi/lb-csi-plugin:1.4.1
           args :
             - "-P"
           env:

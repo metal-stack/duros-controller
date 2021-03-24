@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -719,6 +720,10 @@ var (
 		ObjectMeta: metav1.ObjectMeta{Name: "lb-csi-node", Namespace: namespace},
 		Spec: apps.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: nodeRoleLabels},
+			UpdateStrategy: apps.DaemonSetUpdateStrategy{
+				Type:          apps.RollingUpdateDaemonSetStrategyType,
+				RollingUpdate: &apps.RollingUpdateDaemonSet{MaxUnavailable: &intstr.IntOrString{IntVal: 1}},
+			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: nodeRoleLabels},
 				Spec: v1.PodSpec{
