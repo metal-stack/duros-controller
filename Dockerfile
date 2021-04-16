@@ -1,4 +1,4 @@
-# Build the firewall-controller binary
+# Build the duros-controller binary
 FROM golang:1.16 as builder
 
 ENV KUBEBUILDER_DOWNLOAD_URL=https://github.com/kubernetes-sigs/kubebuilder/releases/download
