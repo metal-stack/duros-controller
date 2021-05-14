@@ -106,3 +106,14 @@ rules:
   - patch
   - update
   - watch
+
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - watch
+  - update
+  - patch
+  - create

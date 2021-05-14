@@ -13,15 +13,14 @@ require (
 	github.com/metal-stack/duros-go v0.1.3-0.20210505062746-b01e6b693451
 	github.com/metal-stack/v v1.0.3
 	github.com/onsi/ginkgo v1.16.2
-	github.com/onsi/gomega v1.11.0
-	github.com/prometheus/common v0.20.0 // indirect
-	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20210503195802-e9a32991a82e // indirect
+	github.com/onsi/gomega v1.12.0
+	github.com/prometheus/common v0.24.0 // indirect
+	go.uber.org/multierr v1.7.0 // indirect
+	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
-	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc v1.37.1
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	honnef.co/go/tools v0.1.3 // indirect
+	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.20.6
 	k8s.io/apiextensions-apiserver v0.20.6 // indirect
 	k8s.io/apimachinery v0.20.6
