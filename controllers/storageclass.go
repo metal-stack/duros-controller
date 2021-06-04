@@ -21,8 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -804,6 +804,12 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	log := r.Log.WithName("storage-class")
 	log.Info("deploy storage-class")
 
+	// rm := r.Shoot.RESTMapper()
+	// gvk, err := rm.ResourceFor(schema.GroupVersionResource{
+	// 	Group:    "storage.k8s.io",
+	// 	Resource: "CSIDriver",
+	// })
+
 	var csid storage.CSIDriver
 	err := r.Shoot.Get(ctx, types.NamespacedName{Name: csiDriver.Name}, &csid)
 	if err != nil {
@@ -886,29 +892,11 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj client.Object) error {
 	log.Info("create or update", "name", namespacedName.Name)
-	err := r.Shoot.Get(ctx, namespacedName, obj)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("create", "name", namespacedName.Name)
-			err = r.Shoot.Create(ctx, obj, &client.CreateOptions{})
-			if err != nil {
-				log.Error(err, "unable to create", "name", namespacedName.Name)
-				return err
-			}
-			return nil
-		}
-		return err
-	}
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		log.Info("update", "name", namespacedName.Name, "new", obj.GetObjectKind().GroupVersionKind())
-		err = r.Shoot.Update(ctx, obj, &client.UpdateOptions{})
-		if err != nil {
-			log.Error(err, "unable to update", "name", namespacedName.Name)
-			return err
-		}
+	mutateF := func() error {
 		return nil
-	})
-	return retryErr
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, mutateF)
+	return err
 }
 
 func boolp(b bool) *bool {
