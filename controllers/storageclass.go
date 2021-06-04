@@ -866,7 +866,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	if err != nil {
 		return err
 	}
-	log.Info("statefulset", "operation", op)
+	log.Info("statefulset", "name", csiControllerStatefulSet.Name, "operation", op)
 
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiNodeDaemonSet, func() error {
 		csiNodeDaemonSet.Annotations["updated"] = time.Now().String()
@@ -875,7 +875,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	if err != nil {
 		return err
 	}
-	log.Info("daemonset", "operation", op)
+	log.Info("daemonset", "name", csiNodeDaemonSet.Name, "operation", op)
 
 	for _, sc := range scs {
 		storageClassName := sc.Name
