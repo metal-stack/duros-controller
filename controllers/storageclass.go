@@ -886,8 +886,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj client.Object) error {
 	log.Info("create or update", "name", namespacedName.Name)
-	old := obj
-	err := r.Shoot.Get(ctx, namespacedName, old)
+	err := r.Shoot.Get(ctx, namespacedName, obj)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("create", "name", namespacedName.Name)
@@ -901,12 +900,7 @@ func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, n
 		return err
 	}
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		err := r.Shoot.Get(ctx, namespacedName, old)
-		if err != nil {
-			log.Error(err, "unable to get", "name", namespacedName.Name)
-			return err
-		}
-		log.Info("update", "name", namespacedName.Name, "old", old.GetObjectKind().GroupVersionKind(), "new", obj.GetObjectKind().GroupVersionKind())
+		log.Info("update", "name", namespacedName.Name, "new", obj.GetObjectKind().GroupVersionKind())
 		err = r.Shoot.Update(ctx, obj, &client.UpdateOptions{})
 		if err != nil {
 			log.Error(err, "unable to update", "name", namespacedName.Name)
