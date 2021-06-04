@@ -787,13 +787,16 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 
 	storageClassSecret := v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: storageClassCredentialsRef, Namespace: namespace},
-		Type:       "kubernetes.io/lb-csi",
-		Data: map[string][]byte{
-			"jwt": []byte(token),
-		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassSecret, func() error { return nil })
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassSecret, func() error {
+		storageClassSecret.Type = "kubernetes.io/lb-csi"
+		storageClassSecret.Data = map[string][]byte{
+			"jwt": []byte(token),
+		}
+
+		return nil
+	})
 	log.Info("storageclasssecret", "name", storageClassCredentialsRef, "operation", op)
 
 	return err
@@ -825,7 +828,11 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	for i := range psps {
 		psp := psps[i]
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &psp, func() error { return nil })
+		obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj.Spec = psp.Spec
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -834,7 +841,10 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	for i := range serviceAccounts {
 		sa := serviceAccounts[i]
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &sa, func() error { return nil })
+		obj := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -843,7 +853,11 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	for i := range clusterRoles {
 		cr := clusterRoles[i]
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &cr, func() error { return nil })
+		obj := &rbac.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: cr.Name, Namespace: cr.Namespace}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj.Rules = cr.Rules
+			return nil
+		})
 		if err != nil {
 			return err
 		}
@@ -852,14 +866,21 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	for i := range clusterRoleBindings {
 		crb := clusterRoleBindings[i]
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &crb, func() error { return nil })
+		obj := &rbac.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crb.Name, Namespace: crb.Namespace}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj.Subjects = crb.Subjects
+			obj.RoleRef = crb.RoleRef
+			return nil
+		})
 		if err != nil {
 			return err
 		}
 		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiControllerStatefulSet, func() error {
+	sts := &apps.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: csiControllerStatefulSet.Name, Namespace: csiControllerStatefulSet.Namespace}}
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
+		sts.Spec = csiControllerStatefulSet.Spec
 		return nil
 	})
 
@@ -868,7 +889,6 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	}
 	log.Info("statefulset", "name", csiControllerStatefulSet.Name, "operation", op)
 
-	// FIXME this was my last try
 	ds := &apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace}}
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, ds, func() error {
 		ds.Spec = csiNodeDaemonSet.Spec
@@ -888,6 +908,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		if sc.Compression {
 			storageClassTemplate.Parameters["compression"] = "enabled"
 		}
+		// FIXME convert also to same approach as other createOrUpdate calls
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassTemplate, func() error { return nil })
 		if err != nil {
 			return err
