@@ -868,8 +868,10 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	}
 	log.Info("statefulset", "name", csiControllerStatefulSet.Name, "operation", op)
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiNodeDaemonSet, func() error {
-		csiNodeDaemonSet.Annotations["updated"] = time.Now().String()
+	// FIXME this was my last try
+	ds := &apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace}}
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, ds, func() error {
+		ds.Spec = csiNodeDaemonSet.Spec
 		return nil
 	})
 	if err != nil {
