@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
@@ -794,9 +793,9 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 		},
 	}
 
-	err = r.createOrUpdate(ctx, log,
-		types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace},
-		&storageClassSecret)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassSecret, func() error { return nil })
+	log.Info("storageclasssecret", "name", storageClassCredentialsRef, "operation", op)
+
 	return err
 }
 
@@ -826,52 +825,57 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	for i := range psps {
 		psp := psps[i]
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: psp.Name, Namespace: psp.Namespace}, &psp)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &psp, func() error { return nil })
 		if err != nil {
 			return err
 		}
+		log.Info("psp", "name", psp.Name, "operation", op)
 	}
 
 	for i := range serviceAccounts {
 		sa := serviceAccounts[i]
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace}, &sa)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &sa, func() error { return nil })
 		if err != nil {
 			return err
 		}
+		log.Info("serviceaccount", "name", sa.Name, "operation", op)
 	}
 
 	for i := range clusterRoles {
 		cr := clusterRoles[i]
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: cr.Name}, &cr)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &cr, func() error { return nil })
 		if err != nil {
 			return err
 		}
+		log.Info("clusterrole", "name", cr.Name, "operation", op)
 	}
 
 	for i := range clusterRoleBindings {
 		crb := clusterRoleBindings[i]
-		err := r.createOrUpdate(ctx, log, types.NamespacedName{Name: crb.Name}, &crb)
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &crb, func() error { return nil })
 		if err != nil {
 			return err
 		}
+		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
 	}
 
-	err = r.createOrUpdate(ctx, log,
-		types.NamespacedName{Name: csiControllerStatefulSet.Name, Namespace: csiControllerStatefulSet.Namespace},
-		&csiControllerStatefulSet,
-	)
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiControllerStatefulSet, func() error {
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}
+	log.Info("statefulset", "operation", op)
 
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiNodeDaemonSet, func() error {
-		// FIXME remove
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiNodeDaemonSet, func() error {
 		csiNodeDaemonSet.Annotations["updated"] = time.Now().String()
 		return nil
 	})
 	if err != nil {
 		return err
 	}
+	log.Info("daemonset", "operation", op)
 
 	for _, sc := range scs {
 		storageClassName := sc.Name
@@ -882,22 +886,14 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		if sc.Compression {
 			storageClassTemplate.Parameters["compression"] = "enabled"
 		}
-		err = r.createOrUpdate(ctx, log, types.NamespacedName{Name: storageClassName}, &storageClassTemplate)
+		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassTemplate, func() error { return nil })
 		if err != nil {
 			return err
 		}
+		log.Info("storageclass", "name", sc.Name, "operation", op)
 	}
 
 	return nil
-}
-
-func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj client.Object) error {
-	log.Info("create or update", "name", namespacedName.Name)
-
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-		return nil
-	})
-	return err
 }
 
 func boolp(b bool) *bool {
