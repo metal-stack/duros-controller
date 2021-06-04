@@ -864,10 +864,11 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		return err
 	}
 
-	err = r.createOrUpdate(ctx, log,
-		types.NamespacedName{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace},
-		&csiNodeDaemonSet,
-	)
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &csiNodeDaemonSet, func() error {
+		// FIXME remove
+		csiNodeDaemonSet.Annotations["updated"] = time.Now().String()
+		return nil
+	})
 	if err != nil {
 		return err
 	}
@@ -892,10 +893,10 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 func (r *DurosReconciler) createOrUpdate(ctx context.Context, log logr.Logger, namespacedName types.NamespacedName, obj client.Object) error {
 	log.Info("create or update", "name", namespacedName.Name)
-	mutateF := func() error {
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 		return nil
-	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, mutateF)
+	})
 	return err
 }
 
