@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -806,14 +807,19 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	log := r.Log.WithName("storage-class")
 	log.Info("deploy storage-class")
 
-	// rm := r.Shoot.RESTMapper()
-	// gvk, err := rm.ResourceFor(schema.GroupVersionResource{
-	// 	Group:    "storage.k8s.io",
-	// 	Resource: "CSIDriver",
-	// })
+	rm := r.Shoot.RESTMapper()
+	gkv, err := rm.ResourceFor(schema.GroupVersionResource{
+		Group:    "storage.k8s.io",
+		Resource: "CSIDriver",
+	})
+	if err != nil {
+		return err
+	}
+
+	log.Info("sc supported", "group", gkv.Group, "kind", gkv.Resource, "version", gkv.Version)
 
 	var csid storage.CSIDriver
-	err := r.Shoot.Get(ctx, types.NamespacedName{Name: csiDriver.Name}, &csid)
+	err = r.Shoot.Get(ctx, types.NamespacedName{Name: csiDriver.Name}, &csid)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			err = r.Shoot.Create(ctx, &csiDriver, &client.CreateOptions{})
