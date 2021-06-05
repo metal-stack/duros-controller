@@ -899,7 +899,8 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	}
 	log.Info("daemonset", "name", csiNodeDaemonSet.Name, "operation", op)
 
-	for _, sc := range scs {
+	for i := range scs {
+		sc := scs[i]
 		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			obj.Parameters["mgmt-endpoint"] = r.Endpoints.String()
