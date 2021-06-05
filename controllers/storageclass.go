@@ -900,16 +900,16 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	log.Info("daemonset", "name", csiNodeDaemonSet.Name, "operation", op)
 
 	for _, sc := range scs {
-		storageClassName := sc.Name
-		storageClassTemplate.ObjectMeta = metav1.ObjectMeta{Name: storageClassName}
-		storageClassTemplate.Parameters["mgmt-endpoint"] = r.Endpoints.String()
-		storageClassTemplate.Parameters["project-name"] = projectID
-		storageClassTemplate.Parameters["replica-count"] = strconv.Itoa(sc.ReplicaCount)
-		if sc.Compression {
-			storageClassTemplate.Parameters["compression"] = "enabled"
-		}
-		// FIXME convert also to same approach as other createOrUpdate calls
-		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassTemplate, func() error { return nil })
+		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
+		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj.Parameters["mgmt-endpoint"] = r.Endpoints.String()
+			obj.Parameters["project-name"] = projectID
+			obj.Parameters["replica-count"] = strconv.Itoa(sc.ReplicaCount)
+			if sc.Compression {
+				storageClassTemplate.Parameters["compression"] = "enabled"
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
