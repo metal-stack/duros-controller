@@ -15,18 +15,17 @@ import (
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
 	storage "k8s.io/api/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
-	namespace = "kube-system"
+	namespace   = "kube-system"
+	provisioner = "csi.lightbitslabs.com"
 )
 
 var (
@@ -82,16 +81,6 @@ var (
 		pspController,
 	}
 
-	// CSIDriver
-	csiDriver = storage.CSIDriver{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi.lightbitslabs.com",
-		},
-		Spec: storage.CSIDriverSpec{
-			AttachRequired: boolp(true),
-			PodInfoOnMount: boolp(true),
-		},
-	}
 	// ServiceAccounts
 	ctrlServiceAccount = v1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -753,7 +742,7 @@ var (
 
 	storageClassCredentialsRef = "lb-csi-creds"
 	storageClassTemplate       = storage.StorageClass{
-		Provisioner:          csiDriver.ObjectMeta.Name,
+		Provisioner:          provisioner,
 		AllowVolumeExpansion: boolp(true),
 		Parameters: map[string]string{
 			"mgmt-scheme": "grpcs",
@@ -815,21 +804,35 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	if err != nil {
 		return err
 	}
-
 	log.Info("sc supported", "group", gkv.Group, "kind", gkv.Resource, "version", gkv.Version)
 
-	var csid storage.CSIDriver
-	err = r.Shoot.Get(ctx, types.NamespacedName{Name: csiDriver.Name}, &csid)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			err = r.Shoot.Create(ctx, &csiDriver, &client.CreateOptions{})
-			if err != nil {
-				log.Error(err, "unable to create csidriver")
-				return err
+	switch gkv.Version {
+	case "v1":
+		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
+			csiDriver.Spec = storage.CSIDriverSpec{
+				AttachRequired: boolp(true),
+				PodInfoOnMount: boolp(true),
 			}
-		} else {
+			return nil
+		})
+		if err != nil {
 			return err
 		}
+		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
+	case "v1beta1":
+		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
+			csiDriver.Spec = storagev1beta1.CSIDriverSpec{
+				AttachRequired: boolp(true),
+				PodInfoOnMount: boolp(true),
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
 	}
 
 	for i := range psps {
