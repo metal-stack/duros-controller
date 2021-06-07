@@ -26,6 +26,8 @@ import (
 const (
 	namespace   = "kube-system"
 	provisioner = "csi.lightbitslabs.com"
+
+	storageClassCredentialsRef = "lb-csi-creds"
 )
 
 var (
@@ -739,26 +741,6 @@ var (
 			},
 		},
 	}
-
-	storageClassCredentialsRef = "lb-csi-creds"
-	storageClassTemplate       = storage.StorageClass{
-		Provisioner:          provisioner,
-		AllowVolumeExpansion: boolp(true),
-		Parameters: map[string]string{
-			"mgmt-scheme": "grpcs",
-			"compression": "disabled",
-			"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
-			"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
-			"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
-			"csi.storage.k8s.io/node-publish-secret-namespace":       namespace,
-			"csi.storage.k8s.io/node-stage-secret-name":              storageClassCredentialsRef,
-			"csi.storage.k8s.io/node-stage-secret-namespace":         namespace,
-			"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
-			"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
-			"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
-			"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
-		},
-	}
 )
 
 func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credential *durosv2.Credential, adminKey []byte) error {
@@ -912,11 +894,28 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		sc := scs[i]
 		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Parameters["mgmt-endpoint"] = r.Endpoints.String()
-			obj.Parameters["project-name"] = projectID
-			obj.Parameters["replica-count"] = strconv.Itoa(sc.ReplicaCount)
+			obj.Provisioner = provisioner
+			obj.AllowVolumeExpansion = boolp(true)
+			obj.Parameters = map[string]string{
+				"mgmt-scheme":   "grpcs",
+				"compression":   "disabled",
+				"mgmt-endpoint": r.Endpoints.String(),
+				"project-name":  projectID,
+				"replica-count": strconv.Itoa(sc.ReplicaCount),
+				"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
+				"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
+				"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
+				"csi.storage.k8s.io/node-publish-secret-namespace":       namespace,
+				"csi.storage.k8s.io/node-stage-secret-name":              storageClassCredentialsRef,
+				"csi.storage.k8s.io/node-stage-secret-namespace":         namespace,
+				"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
+				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
+				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
+				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
+			}
+
 			if sc.Compression {
-				storageClassTemplate.Parameters["compression"] = "enabled"
+				obj.Parameters["compression"] = "enabled"
 			}
 			return nil
 		})
