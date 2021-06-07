@@ -676,35 +676,6 @@ var (
 		},
 	}
 
-	// Controller StatefulSet
-	controllerRoleLabels     = map[string]string{"app": "lb-csi-plugin", "role": "controller"}
-	csiControllerStatefulSet = apps.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "lb-csi-controller", Namespace: namespace},
-		Spec: apps.StatefulSetSpec{
-			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
-			ServiceName: "lb-csi-ctrl-svc",
-			Replicas:    int32p(1),
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
-				Spec: v1.PodSpec{
-					Containers: []v1.Container{
-						csiPluginContainer,
-						csiProvisionerContainer,
-						csiAttacherContainer,
-						csiResizerContainer,
-						snapshotControllerContainer,
-						csiSnapshotterContainer,
-					},
-					ServiceAccountName: ctrlServiceAccount.Name,
-					PriorityClassName:  "system-cluster-critical",
-					Volumes: []v1.Volume{
-						socketDirVolume,
-					},
-				},
-			},
-		},
-	}
-
 	// Node DaemonSet
 	nodeRoleLabels   = map[string]string{"app": "lb-csi-node", "role": "node"}
 	csiNodeDaemonSet = apps.DaemonSet{
@@ -788,6 +759,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	}
 	log.Info("sc supported", "group", gkv.Group, "kind", gkv.Resource, "version", gkv.Version)
 
+	snapshotsSupported := false
 	switch gkv.Version {
 	case "v1":
 		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
@@ -802,6 +774,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 			return err
 		}
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
+		snapshotsSupported = true
 	case "v1beta1":
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
@@ -815,6 +788,10 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 			return err
 		}
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
+	default:
+		err := fmt.Errorf("unsupported csi driver version:%s", gkv.Version)
+		log.Error(err, "no csi plugin deployment possible")
+		return err
 	}
 
 	for i := range psps {
@@ -869,16 +846,43 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
 	}
 
-	sts := &apps.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: csiControllerStatefulSet.Name, Namespace: csiControllerStatefulSet.Namespace}}
+	sts := &apps.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "lb-csi-controller", Namespace: namespace}}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-		sts.Spec = csiControllerStatefulSet.Spec
+
+		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
+		containers := []v1.Container{
+			csiPluginContainer,
+			csiProvisionerContainer,
+			csiAttacherContainer,
+			csiResizerContainer,
+		}
+		if snapshotsSupported {
+			containers = append(containers, snapshotControllerContainer, csiSnapshotterContainer)
+		}
+
+		sts.Spec = apps.StatefulSetSpec{
+			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
+			ServiceName: "lb-csi-ctrl-svc",
+			Replicas:    int32p(1),
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
+				Spec: v1.PodSpec{
+					Containers:         containers,
+					ServiceAccountName: ctrlServiceAccount.Name,
+					PriorityClassName:  "system-cluster-critical",
+					Volumes: []v1.Volume{
+						socketDirVolume,
+					},
+				},
+			},
+		}
 		return nil
 	})
 
 	if err != nil {
 		return err
 	}
-	log.Info("statefulset", "name", csiControllerStatefulSet.Name, "operation", op)
+	log.Info("statefulset", "name", sts.Name, "operation", op)
 
 	ds := &apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace}}
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, ds, func() error {
