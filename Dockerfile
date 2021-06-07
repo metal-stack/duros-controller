@@ -1,8 +1,8 @@
-# Build the firewall-controller binary
-FROM golang:1.15 as builder
+# Build the duros-controller binary
+FROM golang:1.16 as builder
 
 ENV KUBEBUILDER_DOWNLOAD_URL=https://github.com/kubernetes-sigs/kubebuilder/releases/download
-ENV KUBEBUILDER_VER=2.3.1
+ENV KUBEBUILDER_VER=2.3.2
 ENV KUBEBUILDER_ASSETS=/usr/local/bin
 RUN set -ex \
  && mkdir -p /tmp/kubebuilder /usr/local/bin \
@@ -31,7 +31,7 @@ COPY main.go main.go
 RUN make
 
 # Final Image
-FROM alpine:3.12
+FROM alpine:3.13
 WORKDIR /
 COPY --from=builder /workspace/bin/duros-controller .
 USER 65534
