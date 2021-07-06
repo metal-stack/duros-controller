@@ -61,6 +61,11 @@ func main() {
 		adminKey             string
 		endpoints            string
 		namespace            string
+		// apiEndpoint is the duros-grpc-proxy with client cert validation
+		apiEndpoint string
+		apiCA       string
+		apiKey      string
+		apiCert     string
 	)
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -71,6 +76,12 @@ func main() {
 	flag.StringVar(&adminToken, "admin-token", "/duros/admin-token", "The admin token file for the duros api.")
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
+
+	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates")
+	flag.StringVar(&apiEndpoint, "api-ca", "", "The api endpoint ca")
+	flag.StringVar(&apiEndpoint, "api-cert", "", "The api endpoint cert")
+	flag.StringVar(&apiEndpoint, "api-key", "", "The api endpoint key")
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -127,6 +138,17 @@ func main() {
 		Scheme:    duros.GRPCS,
 		Log:       zap.NewRaw().Sugar(),
 	}
+
+	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
+		creds := &duros.ByteCredentials{
+			CA:         []byte(apiCA),
+			Cert:       []byte(apiCert),
+			Key:        []byte(apiKey),
+			ServerName: apiEndpoint,
+		}
+		durosConfig.ByteCredentials = creds
+	}
+
 	durosClient, err := duros.Dial(ctx, durosConfig)
 	if err != nil {
 		setupLog.Error(err, "problem running duros-controller")
