@@ -77,9 +77,9 @@ func main() {
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
 
 	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates, api-ca, api-cert and api-key are required as well")
-	flag.StringVar(&apiEndpoint, "api-ca", "", "The api endpoint ca")
-	flag.StringVar(&apiEndpoint, "api-cert", "", "The api endpoint cert")
-	flag.StringVar(&apiEndpoint, "api-key", "", "The api endpoint key")
+	flag.StringVar(&apiCA, "api-ca", "", "The api endpoint ca")
+	flag.StringVar(&apiCert, "api-cert", "", "The api endpoint cert")
+	flag.StringVar(&apiKey, "api-key", "", "The api endpoint key")
 
 	flag.Parse()
 
