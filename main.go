@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"os"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -77,7 +76,7 @@ func main() {
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
 
-	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates")
+	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates, api-ca, api-cert and api-key are required as well")
 	flag.StringVar(&apiEndpoint, "api-ca", "", "The api endpoint ca")
 	flag.StringVar(&apiEndpoint, "api-cert", "", "The api endpoint cert")
 	flag.StringVar(&apiEndpoint, "api-key", "", "The api endpoint key")
@@ -120,12 +119,12 @@ func main() {
 
 	// connect to duros
 
-	at, err := ioutil.ReadFile(adminToken)
+	at, err := os.ReadFile(adminToken)
 	if err != nil {
 		setupLog.Error(err, "unable to read admin-token from file")
 		panic(err)
 	}
-	ak, err := ioutil.ReadFile(adminKey)
+	ak, err := os.ReadFile(adminKey)
 	if err != nil {
 		setupLog.Error(err, "unable to read admin-key from file")
 		panic(err)
@@ -140,13 +139,36 @@ func main() {
 	}
 
 	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
+		ac, err := os.ReadFile(apiCA)
+		if err != nil {
+			setupLog.Error(err, "unable to read api-ca from file")
+			panic(err)
+		}
+		ace, err := os.ReadFile(apiCert)
+		if err != nil {
+			setupLog.Error(err, "unable to read api-cert from file")
+			panic(err)
+		}
+		ak, err := os.ReadFile(apiKey)
+		if err != nil {
+			setupLog.Error(err, "unable to read api-key from file")
+			panic(err)
+		}
+
+		ep, err := duros.ParseEndpoint(apiEndpoint)
+		if err != nil {
+			setupLog.Error(err, "unable to parse api-endpoint")
+			panic(err)
+		}
+
 		creds := &duros.ByteCredentials{
-			CA:         []byte(apiCA),
-			Cert:       []byte(apiCert),
-			Key:        []byte(apiKey),
+			CA:         []byte(ac),
+			Cert:       []byte(ace),
+			Key:        []byte(ak),
 			ServerName: apiEndpoint,
 		}
 		durosConfig.ByteCredentials = creds
+		durosConfig.Endpoints = duros.EPs{duros.EP{Host: ep.Host, Port: ep.Port}}
 	}
 
 	durosClient, err := duros.Dial(ctx, durosConfig)
