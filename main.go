@@ -122,12 +122,12 @@ func main() {
 	at, err := os.ReadFile(adminToken)
 	if err != nil {
 		setupLog.Error(err, "unable to read admin-token from file")
-		panic(err)
+		os.Exit(1)
 	}
 	ak, err := os.ReadFile(adminKey)
 	if err != nil {
 		setupLog.Error(err, "unable to read admin-key from file")
-		panic(err)
+		os.Exit(1)
 	}
 	ctx := context.Background()
 	durosEPs := duros.MustParseCSV(endpoints)
@@ -142,23 +142,23 @@ func main() {
 		ac, err := os.ReadFile(apiCA)
 		if err != nil {
 			setupLog.Error(err, "unable to read api-ca from file")
-			panic(err)
+			os.Exit(1)
 		}
 		ace, err := os.ReadFile(apiCert)
 		if err != nil {
 			setupLog.Error(err, "unable to read api-cert from file")
-			panic(err)
+			os.Exit(1)
 		}
 		ak, err := os.ReadFile(apiKey)
 		if err != nil {
 			setupLog.Error(err, "unable to read api-key from file")
-			panic(err)
+			os.Exit(1)
 		}
 
 		ep, err := duros.ParseEndpoint(apiEndpoint)
 		if err != nil {
 			setupLog.Error(err, "unable to parse api-endpoint")
-			panic(err)
+			os.Exit(1)
 		}
 
 		creds := &duros.ByteCredentials{
@@ -174,17 +174,17 @@ func main() {
 	durosClient, err := duros.Dial(ctx, durosConfig)
 	if err != nil {
 		setupLog.Error(err, "problem running duros-controller")
-		panic(err)
+		os.Exit(1)
 	}
 	version, err := durosClient.GetVersion(ctx, &v2.GetVersionRequest{})
 	if err != nil {
 		setupLog.Error(err, "unable to connect to duros")
-		panic(err)
+		os.Exit(1)
 	}
 	cinfo, err := durosClient.GetClusterInfo(ctx, &v2.GetClusterRequest{})
 	if err != nil {
 		setupLog.Error(err, "unable to query duros api for cluster info")
-		panic(err)
+		os.Exit(1)
 	}
 	setupLog.Info("connected", "duros version", version.ApiVersion, "cluster", cinfo.ApiEndpoints)
 	if err = (&controllers.DurosReconciler{
