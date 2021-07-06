@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"os"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -61,6 +60,11 @@ func main() {
 		adminKey             string
 		endpoints            string
 		namespace            string
+		// apiEndpoint is the duros-grpc-proxy with client cert validation
+		apiEndpoint string
+		apiCA       string
+		apiKey      string
+		apiCert     string
 	)
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -71,6 +75,12 @@ func main() {
 	flag.StringVar(&adminToken, "admin-token", "/duros/admin-token", "The admin token file for the duros api.")
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
+
+	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates, api-ca, api-cert and api-key are required as well")
+	flag.StringVar(&apiCA, "api-ca", "", "The api endpoint ca")
+	flag.StringVar(&apiCert, "api-cert", "", "The api endpoint cert")
+	flag.StringVar(&apiKey, "api-key", "", "The api endpoint key")
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -109,15 +119,15 @@ func main() {
 
 	// connect to duros
 
-	at, err := ioutil.ReadFile(adminToken)
+	at, err := os.ReadFile(adminToken)
 	if err != nil {
 		setupLog.Error(err, "unable to read admin-token from file")
-		panic(err)
+		os.Exit(1)
 	}
-	ak, err := ioutil.ReadFile(adminKey)
+	ak, err := os.ReadFile(adminKey)
 	if err != nil {
 		setupLog.Error(err, "unable to read admin-key from file")
-		panic(err)
+		os.Exit(1)
 	}
 	ctx := context.Background()
 	durosEPs := duros.MustParseCSV(endpoints)
@@ -127,20 +137,55 @@ func main() {
 		Scheme:    duros.GRPCS,
 		Log:       zap.NewRaw().Sugar(),
 	}
+
+	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
+		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
+		ac, err := os.ReadFile(apiCA)
+		if err != nil {
+			setupLog.Error(err, "unable to read api-ca from file")
+			os.Exit(1)
+		}
+		ace, err := os.ReadFile(apiCert)
+		if err != nil {
+			setupLog.Error(err, "unable to read api-cert from file")
+			os.Exit(1)
+		}
+		ak, err := os.ReadFile(apiKey)
+		if err != nil {
+			setupLog.Error(err, "unable to read api-key from file")
+			os.Exit(1)
+		}
+
+		ep, err := duros.ParseEndpoint(apiEndpoint)
+		if err != nil {
+			setupLog.Error(err, "unable to parse api-endpoint")
+			os.Exit(1)
+		}
+
+		creds := &duros.ByteCredentials{
+			CA:         []byte(ac),
+			Cert:       []byte(ace),
+			Key:        []byte(ak),
+			ServerName: ep.Host,
+		}
+		durosConfig.ByteCredentials = creds
+		durosConfig.Endpoints = duros.EPs{duros.EP{Host: ep.Host, Port: ep.Port}}
+	}
+
 	durosClient, err := duros.Dial(ctx, durosConfig)
 	if err != nil {
 		setupLog.Error(err, "problem running duros-controller")
-		panic(err)
+		os.Exit(1)
 	}
 	version, err := durosClient.GetVersion(ctx, &v2.GetVersionRequest{})
 	if err != nil {
 		setupLog.Error(err, "unable to connect to duros")
-		panic(err)
+		os.Exit(1)
 	}
 	cinfo, err := durosClient.GetClusterInfo(ctx, &v2.GetClusterRequest{})
 	if err != nil {
 		setupLog.Error(err, "unable to query duros api for cluster info")
-		panic(err)
+		os.Exit(1)
 	}
 	setupLog.Info("connected", "duros version", version.ApiVersion, "cluster", cinfo.ApiEndpoints)
 	if err = (&controllers.DurosReconciler{
