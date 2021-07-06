@@ -139,6 +139,7 @@ func main() {
 	}
 
 	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
+		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
 		ac, err := os.ReadFile(apiCA)
 		if err != nil {
 			setupLog.Error(err, "unable to read api-ca from file")
@@ -165,7 +166,7 @@ func main() {
 			CA:         []byte(ac),
 			Cert:       []byte(ace),
 			Key:        []byte(ak),
-			ServerName: apiEndpoint,
+			ServerName: ep.Host,
 		}
 		durosConfig.ByteCredentials = creds
 		durosConfig.Endpoints = duros.EPs{duros.EP{Host: ep.Host, Port: ep.Port}}
