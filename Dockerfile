@@ -31,7 +31,7 @@ COPY main.go main.go
 RUN make
 
 # Final Image
-FROM alpine:3.13
+FROM alpine:3.14
 WORKDIR /
 COPY --from=builder /workspace/bin/duros-controller .
 USER 65534
