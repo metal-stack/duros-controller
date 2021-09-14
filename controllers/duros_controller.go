@@ -35,6 +35,7 @@ import (
 	v1 "github.com/metal-stack/duros-controller/api/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DurosReconciler reconciles a Duros object
@@ -123,15 +124,16 @@ func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.
 		return fmt.Errorf("error getting daemon set: %w", err)
 	}
 
-	dsStatus := v1.DeploymentStatus{
-		Name:        ds.Name,
-		Group:       ds.GroupVersionKind().Group,
-		State:       v1.DeploymentStateRunning,
-		Description: "All replicas are ready",
+	dsStatus := v1.ManagedResourceStatus{
+		Name:           ds.Name,
+		Group:          ds.GroupVersionKind().Group,
+		State:          v1.HealthStateRunning,
+		Description:    "All replicas are ready",
+		LastUpdateTime: metav1.NewTime(time.Now()),
 	}
 
 	if ds.Status.DesiredNumberScheduled != ds.Status.NumberReady {
-		dsStatus.State = v1.DeploymentStateNotRunning
+		dsStatus.State = v1.HealthStateNotRunning
 		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
 	}
 
@@ -141,11 +143,12 @@ func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.
 		return fmt.Errorf("error getting statefulset: %w", err)
 	}
 
-	stsStatus := v1.DeploymentStatus{
-		Name:        sts.Name,
-		Group:       sts.GroupVersionKind().Group,
-		State:       v1.DeploymentStateRunning,
-		Description: "All replicas are ready",
+	stsStatus := v1.ManagedResourceStatus{
+		Name:           sts.Name,
+		Group:          sts.GroupVersionKind().Group,
+		State:          v1.HealthStateRunning,
+		Description:    "All replicas are ready",
+		LastUpdateTime: metav1.NewTime(time.Now()),
 	}
 
 	replicas := int32(1)
@@ -154,11 +157,11 @@ func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.
 	}
 
 	if replicas != sts.Status.ReadyReplicas {
-		stsStatus.State = v1.DeploymentStateNotRunning
+		stsStatus.State = v1.HealthStateNotRunning
 		stsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", sts.Status.ReadyReplicas, replicas)
 	}
 
-	duros.Status.DeploymentStatuses = append(duros.Status.DeploymentStatuses, dsStatus, stsStatus)
+	duros.Status.ManagedResourceStatuses = append(duros.Status.ManagedResourceStatuses, dsStatus, stsStatus)
 	err = r.Status().Update(context.Background(), duros)
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
