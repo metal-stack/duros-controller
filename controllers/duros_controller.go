@@ -107,7 +107,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return requeue, err
 	}
 
-	err = r.ReconcileStatus(ctx, &duros)
+	err = r.reconcileStatus(ctx, &duros)
 	if err != nil {
 		return requeue, err
 	}
@@ -115,7 +115,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{}, nil
 }
 
-func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
+func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
 	var (
 		updateTime = metav1.NewTime(time.Now())
 		ds         = &appsv1.DaemonSet{}
