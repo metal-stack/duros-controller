@@ -165,7 +165,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros storagev1.D
 		stsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", sts.Status.ReadyReplicas, replicas)
 	}
 
-	duros.Status.ManagedResourceStatuses = append(duros.Status.ManagedResourceStatuses, dsStatus, stsStatus)
+	duros.Status.ManagedResourceStatuses = []v1.ManagedResourceStatus{dsStatus, stsStatus}
 	err = r.Status().Update(ctx, &duros)
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
