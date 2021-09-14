@@ -59,7 +59,7 @@ type DurosStatus struct {
 	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
 
 	// ManagedResourceStatuses contains a list of statuses of resources managed by this controller
-	ManagedResourceStatuses []ManagedResourceStatus `json:"managedResourceStatuses" description:"A list of deployed resource statuses"`
+	ManagedResourceStatuses []ManagedResourceStatus `json:"managedResourceStatuses" description:"A list of managed resource statuses"`
 }
 
 type ManagedResourceStatus struct {
