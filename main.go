@@ -136,6 +136,7 @@ func main() {
 		Endpoints: durosEPs,
 		Scheme:    duros.GRPCS,
 		Log:       zap.NewRaw().Sugar(),
+		UserAgent: "duros-controller",
 	}
 
 	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
