@@ -18,5 +18,3 @@ require (
 	k8s.io/client-go v0.22.1
 	sigs.k8s.io/controller-runtime v0.10.0
 )
-
-replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.25+incompatible
