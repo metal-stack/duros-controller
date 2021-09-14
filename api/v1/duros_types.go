@@ -27,6 +27,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="ProjectID",type=string,JSONPath=`.spec.metalProjectID`
 // +kubebuilder:printcolumn:name="StorageClasses",type=string,JSONPath=`.spec.storageClasses`
+// +kubebuilder:subresource:status
 type Duros struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

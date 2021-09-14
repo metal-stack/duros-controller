@@ -166,7 +166,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 	}
 
 	duros.Status.ManagedResourceStatuses = append(duros.Status.ManagedResourceStatuses, dsStatus, stsStatus)
-	err = r.Status().Update(context.Background(), duros)
+	err = r.Status().Update(ctx, duros)
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
 	}
