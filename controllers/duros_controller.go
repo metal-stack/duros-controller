@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,6 +33,8 @@ import (
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	v1 "github.com/metal-stack/duros-controller/api/v1"
+
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 // DurosReconciler reconciles a Duros object
@@ -102,7 +105,66 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		return requeue, err
 	}
+
+	err = r.ReconcileStatus(ctx, &duros)
+	if err != nil {
+		return requeue, err
+	}
+
 	return ctrl.Result{}, nil
+}
+
+func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
+	duros.Status.SecretRef = "" // TODO?
+
+	var ds *appsv1.DaemonSet
+	err := r.Shoot.Get(ctx, types.NamespacedName{Name: "lb-csi-node", Namespace: namespace}, ds)
+	if err != nil {
+		return fmt.Errorf("error getting daemon set: %w", err)
+	}
+
+	dsStatus := v1.DeploymentStatus{
+		Name:        ds.Name,
+		Group:       ds.GroupVersionKind().Group,
+		State:       v1.DeploymentStateRunning,
+		Description: "All replicas are ready",
+	}
+
+	if ds.Status.DesiredNumberScheduled != ds.Status.NumberReady {
+		dsStatus.State = v1.DeploymentStateNotRunning
+		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
+	}
+
+	var sts *appsv1.StatefulSet
+	err = r.Shoot.Get(ctx, types.NamespacedName{Name: "lb-csi-controller", Namespace: namespace}, sts)
+	if err != nil {
+		return fmt.Errorf("error getting statefulset: %w", err)
+	}
+
+	stsStatus := v1.DeploymentStatus{
+		Name:        sts.Name,
+		Group:       sts.GroupVersionKind().Group,
+		State:       v1.DeploymentStateRunning,
+		Description: "All replicas are ready",
+	}
+
+	replicas := int32(1)
+	if sts.Spec.Replicas != nil {
+		replicas = *sts.Spec.Replicas
+	}
+
+	if replicas != sts.Status.ReadyReplicas {
+		stsStatus.State = v1.DeploymentStateNotRunning
+		stsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", sts.Status.ReadyReplicas, replicas)
+	}
+
+	duros.Status.DeploymentStatuses = append(duros.Status.DeploymentStatuses, dsStatus, stsStatus)
+	err = r.Status().Update(context.Background(), duros)
+	if err != nil {
+		return fmt.Errorf("error updating status: %w", err)
+	}
+
+	return nil
 }
 
 // SetupWithManager boilerplate to setup the Reconciler

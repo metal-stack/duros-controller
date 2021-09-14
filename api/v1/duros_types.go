@@ -57,7 +57,27 @@ type DurosStatus struct {
 	// SecretRef to the create JWT Token
 	// TODO, this can be used to detect required key rotation
 	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
+
+	// DeploymentStatuses contains a list of statuses of components deployed by this controller
+	DeploymentStatuses []DeploymentStatus `json:"deploymentStatuses" description:"A list of deployed component statuses"`
 }
+
+type DeploymentStatus struct {
+	Name        string          `json:"name" description:"The name of the resource"`
+	Group       string          `json:"group" description:"The group kind of the resource"`
+	State       DeploymentState `json:"state" description:"The deployment state of this component"`
+	Description string          `json:"description" description:"The description of the state of this component"`
+}
+
+// DeploymentState describes the state of a deployed resource
+type DeploymentState string
+
+const (
+	// DeploymentStateRunning indicates that the deployed resource is running
+	DeploymentStateRunning DeploymentState = "Running"
+	// DeploymentStateNotRunning indicates that the deployed resource is not running
+	DeploymentStateNotRunning DeploymentState = "Not Running"
+)
 
 // StorageClass defines the storageClass parameters
 type StorageClass struct {
