@@ -131,7 +131,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros storagev1.D
 
 	dsStatus := v1.ManagedResourceStatus{
 		Name:           ds.Name,
-		Group:          ds.GroupVersionKind().Group,
+		Group:          ds.GroupVersionKind().String(),
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
@@ -149,7 +149,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros storagev1.D
 
 	stsStatus := v1.ManagedResourceStatus{
 		Name:           sts.Name,
-		Group:          sts.GroupVersionKind().Group,
+		Group:          sts.GroupVersionKind().String(),
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
