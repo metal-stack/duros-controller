@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go v0.94.1 // indirect
 	github.com/go-logr/logr v0.4.0
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/metal-stack/duros-go v0.2.3-0.20210914091702-474dacff17c2
+	github.com/metal-stack/duros-go v0.2.3-0.20210914113628-2bbc26b3777b
 	github.com/metal-stack/v v1.0.3
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
