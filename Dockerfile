@@ -1,5 +1,5 @@
 # Build the duros-controller binary
-FROM golang:1.16 as builder
+FROM golang:1.17 as builder
 
 ENV KUBEBUILDER_DOWNLOAD_URL=https://github.com/kubernetes-sigs/kubebuilder/releases/download
 ENV KUBEBUILDER_VER=2.3.2
@@ -31,7 +31,7 @@ COPY main.go main.go
 RUN make
 
 # Final Image
-FROM alpine:3.13
+FROM alpine:3.14
 WORKDIR /
 COPY --from=builder /workspace/bin/duros-controller .
 USER 65534

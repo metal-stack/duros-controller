@@ -131,11 +131,13 @@ func main() {
 	}
 	ctx := context.Background()
 	durosEPs := duros.MustParseCSV(endpoints)
+	ua := "duros-controller"
 	durosConfig := duros.DialConfig{
 		Token:     string(at),
 		Endpoints: durosEPs,
 		Scheme:    duros.GRPCS,
 		Log:       zap.NewRaw().Sugar(),
+		UserAgent: &ua,
 	}
 
 	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
