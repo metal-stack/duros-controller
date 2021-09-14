@@ -116,9 +116,14 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
+	var (
+		updateTime = metav1.NewTime(time.Now())
+		ds         *appsv1.DaemonSet
+		sts        *appsv1.StatefulSet
+	)
+
 	duros.Status.SecretRef = "" // TODO?
 
-	var ds *appsv1.DaemonSet
 	err := r.Shoot.Get(ctx, types.NamespacedName{Name: "lb-csi-node", Namespace: namespace}, ds)
 	if err != nil {
 		return fmt.Errorf("error getting daemon set: %w", err)
@@ -129,7 +134,7 @@ func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.
 		Group:          ds.GroupVersionKind().Group,
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
-		LastUpdateTime: metav1.NewTime(time.Now()),
+		LastUpdateTime: updateTime,
 	}
 
 	if ds.Status.DesiredNumberScheduled != ds.Status.NumberReady {
@@ -137,7 +142,6 @@ func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.
 		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
 	}
 
-	var sts *appsv1.StatefulSet
 	err = r.Shoot.Get(ctx, types.NamespacedName{Name: "lb-csi-controller", Namespace: namespace}, sts)
 	if err != nil {
 		return fmt.Errorf("error getting statefulset: %w", err)
@@ -148,7 +152,7 @@ func (r *DurosReconciler) ReconcileStatus(ctx context.Context, duros *storagev1.
 		Group:          sts.GroupVersionKind().Group,
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
-		LastUpdateTime: metav1.NewTime(time.Now()),
+		LastUpdateTime: updateTime,
 	}
 
 	replicas := int32(1)
