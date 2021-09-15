@@ -1016,6 +1016,8 @@ func (r *DurosReconciler) cleanupStorageClass(ctx context.Context, scs []storage
 		})
 	}
 
+	// we don't clean up the CSI driver because there can be volumes that still reference it
+
 	for _, resource := range resources {
 		if err := r.deleteResourceWithWait(ctx, log, resource); err != nil {
 			return err
@@ -1043,6 +1045,6 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 			return true, nil
 		}
 
-		return false, fmt.Errorf("error cleaning up resource during deletion flow: %w", err)
+		return false, err
 	})
 }
