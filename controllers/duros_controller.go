@@ -128,7 +128,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	duros.Status.SecretRef = "" // TODO?
 
-	err := r.Shoot.Get(ctx, types.NamespacedName{Name: "lb-csi-node", Namespace: namespace}, ds)
+	err := r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSINodeName, Namespace: namespace}, ds)
 	if err != nil {
 		return fmt.Errorf("error getting daemon set: %w", err)
 	}
@@ -146,7 +146,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
 	}
 
-	err = r.Shoot.Get(ctx, types.NamespacedName{Name: "lb-csi-controller", Namespace: namespace}, sts)
+	err = r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace}, sts)
 	if err != nil {
 		return fmt.Errorf("error getting statefulset: %w", err)
 	}
