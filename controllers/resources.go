@@ -751,7 +751,7 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 	// secret already exists, check for renewal
 	token, ok := secret.Data["jwt"]
 	if !ok {
-		log.Error(fmt.Errorf("no token present in existing token"), "recreating storage-class-secret")
+		log.Error(fmt.Errorf("no storage class token present in existing token"), "recreating storage-class-secret")
 		err := r.deleteResourceWithWait(ctx, log, deletionResource{
 			Key:    key,
 			Object: secret,
@@ -765,7 +765,7 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 	claims := &jwt.StandardClaims{}
 	_, _, err = new(jwt.Parser).ParseUnverified(string(token), claims)
 	if err != nil {
-		log.Error(err, "token not parsable, recreating storage-class-secret")
+		log.Error(err, "storage class token not parsable, recreating storage-class-secret")
 		err := r.deleteResourceWithWait(ctx, log, deletionResource{
 			Key:    key,
 			Object: secret,
@@ -777,8 +777,8 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 	}
 
 	expiresAt := time.Unix(claims.ExpiresAt, 0)
-	if time.Since(expiresAt.Add(-tokenRenewalBefore)) > 0 {
-		log.Info("token is expiring soon at %s, refreshing token")
+	if time.Now().After(expiresAt.Add(-tokenRenewalBefore)) {
+		log.Info("storage class token is expiring soon at %s, refreshing token")
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 

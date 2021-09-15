@@ -55,10 +55,6 @@ type DurosSpec struct {
 
 // DurosStatus defines the observed state of Duros
 type DurosStatus struct {
-	// SecretRef to the create JWT Token
-	// TODO, this can be used to detect required key rotation
-	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
-
 	// ManagedResourceStatuses contains a list of statuses of resources managed by this controller
 	ManagedResourceStatuses []ManagedResourceStatus `json:"managedResourceStatuses" description:"A list of managed resource statuses"`
 }

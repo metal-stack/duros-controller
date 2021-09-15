@@ -154,8 +154,6 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 		sts        = &appsv1.StatefulSet{}
 	)
 
-	duros.Status.SecretRef = "" // TODO?
-
 	err := r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSINodeName, Namespace: namespace}, ds)
 	if err != nil {
 		return fmt.Errorf("error getting daemon set: %w", err)
