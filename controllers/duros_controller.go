@@ -123,9 +123,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 	var (
 		updateTime = metav1.NewTime(time.Now())
 		ds         = &appsv1.DaemonSet{}
-		dsGroup    = ds.GroupVersionKind().String()
 		sts        = &appsv1.StatefulSet{}
-		stsGroup   = sts.GroupVersionKind().String()
 	)
 
 	duros.Status.SecretRef = "" // TODO?
@@ -137,7 +135,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	dsStatus := v1.ManagedResourceStatus{
 		Name:           ds.Name,
-		Group:          dsGroup,
+		Group:          "DaemonSet", // ds.GetObjectKind().GroupVersionKind().String() --> this does not work :(
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
@@ -155,7 +153,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	stsStatus := v1.ManagedResourceStatus{
 		Name:           sts.Name,
-		Group:          stsGroup,
+		Group:          "StatefulSet", // sts.GetObjectKind().GroupVersionKind().String() --> this does not work :(
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
