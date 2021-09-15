@@ -115,8 +115,6 @@ func main() {
 			setupLog.Error(err, "unable to create shoot client")
 			os.Exit(1)
 		}
-		utilruntime.Must(clientgoscheme.AddToScheme(shootClient.Scheme()))
-		utilruntime.Must(storagev1.AddToScheme(shootClient.Scheme()))
 	}
 
 	// connect to duros
