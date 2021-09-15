@@ -11,15 +11,20 @@ import (
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	apps "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
 	storage "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -34,10 +39,10 @@ const (
 )
 
 var (
-	hostPathDirectoryOrCreate       = v1.HostPathDirectoryOrCreate
-	hostPathDirectory               = v1.HostPathDirectory
-	mountPropagationHostToContainer = v1.MountPropagationHostToContainer
-	mountPropagationBidirectional   = v1.MountPropagationBidirectional
+	hostPathDirectoryOrCreate       = corev1.HostPathDirectoryOrCreate
+	hostPathDirectory               = corev1.HostPathDirectory
+	mountPropagationHostToContainer = corev1.MountPropagationHostToContainer
+	mountPropagationBidirectional   = corev1.MountPropagationBidirectional
 
 	// PSP
 	pspController = policy.PodSecurityPolicy{
@@ -60,7 +65,7 @@ var (
 			Name: "lb-csi-node-sa",
 		},
 		Spec: policy.PodSecurityPolicySpec{
-			AllowedCapabilities: []v1.Capability{"SYS_ADMIN"},
+			AllowedCapabilities: []corev1.Capability{"SYS_ADMIN"},
 			AllowedHostPaths: []policy.AllowedHostPath{
 				{PathPrefix: "/var/lib/kubelet"},
 				{PathPrefix: "/dev"},
@@ -87,20 +92,20 @@ var (
 	}
 
 	// ServiceAccounts
-	ctrlServiceAccount = v1.ServiceAccount{
+	ctrlServiceAccount = corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lb-csi-ctrl-sa",
 			Namespace: namespace,
 		},
 	}
 
-	nodeServiceAccount = v1.ServiceAccount{
+	nodeServiceAccount = corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lb-csi-node-sa",
 			Namespace: namespace,
 		},
 	}
-	serviceAccounts = []v1.ServiceAccount{ctrlServiceAccount, nodeServiceAccount}
+	serviceAccounts = []corev1.ServiceAccount{ctrlServiceAccount, nodeServiceAccount}
 
 	// ClusterRoles
 	nodeClusterRole = rbac.ClusterRole{
@@ -446,120 +451,120 @@ var (
 	memory100m, _         = resource.ParseQuantity("100M")
 	cpu200m, _            = resource.ParseQuantity("200m")
 	memory200m, _         = resource.ParseQuantity("200M")
-	defaultResourceLimits = v1.ResourceRequirements{
-		Requests: v1.ResourceList{
+	defaultResourceLimits = corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
 			"cpu":    cpu100m,
 			"memory": memory100m,
 		},
-		Limits: v1.ResourceList{
+		Limits: corev1.ResourceList{
 			"cpu":    cpu200m,
 			"memory": memory200m,
 		},
 	}
 
 	// Containers
-	csiPluginContainer = v1.Container{
+	csiPluginContainer = corev1.Container{
 		Name:            "lb-csi-plugin",
 		Image:           lbCSIPluginImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"-P"},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "CSI_ENDPOINT", Value: "unix:///var/lib/csi/sockets/pluginproxy/csi.sock"},
-			{Name: "KUBE_NODE_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+			{Name: "KUBE_NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 			{Name: "LB_CSI_NODE_ID", Value: "$(KUBE_NODE_NAME).ctrl"},
 			{Name: "LB_CSI_LOG_LEVEL", Value: "debug"},
 			{Name: "LB_CSI_LOG_ROLE", Value: "controller"},
 			{Name: "LB_CSI_LOG_FMT", Value: "text"},
 			{Name: "LB_CSI_LOG_TIME", Value: "true"},
 		},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
 	}
-	csiProvisionerContainer = v1.Container{
+	csiProvisionerContainer = corev1.Container{
 		Name:            "csi-provisioner",
 		Image:           csiProvisionerImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4"},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
 	}
-	csiAttacherContainer = v1.Container{
+	csiAttacherContainer = corev1.Container{
 		Name:            "csi-attacher",
 		Image:           csiAttacherImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=5"},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
 	}
-	csiResizerContainer = v1.Container{
+	csiResizerContainer = corev1.Container{
 		Name:            "csi-resizer",
 		Image:           csiResizerImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4"},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
 	}
-	snapshotControllerContainer = v1.Container{
+	snapshotControllerContainer = corev1.Container{
 		Name:            "snapshot-controller",
 		Image:           snapshotControllerImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--leader-election=false", "--v=5"},
 		Resources:       defaultResourceLimits,
 	}
-	csiSnapshotterContainer = v1.Container{
+	csiSnapshotterContainer = corev1.Container{
 		Name:            "csi-snapshotter",
 		Image:           csiSnapshotterImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--leader-election=false", "--v=5"},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
 	}
-	discoveryClientContainer = v1.Container{
+	discoveryClientContainer = corev1.Container{
 		Name:            "lb-nvme-discovery-client",
 		Image:           lbDiscoveryClientImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
-		VolumeMounts: []v1.VolumeMount{
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: deviceDirVolume.Name, MountPath: "/dev"},
 			{Name: discoveryClientDirVolume.Name, MountPath: "/etc/discovery-client/discovery.d"},
 		},
-		SecurityContext: &v1.SecurityContext{
-			Privileged: boolp(true),
-			Capabilities: &v1.Capabilities{
-				Add: []v1.Capability{"SYS_ADMIN"},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged: pointer.Bool(true),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"SYS_ADMIN"},
 			},
-			AllowPrivilegeEscalation: boolp(true),
+			AllowPrivilegeEscalation: pointer.Bool(true),
 		},
 		Resources: defaultResourceLimits,
 	}
 
-	nodeInitContainer = v1.Container{
+	nodeInitContainer = corev1.Container{
 		Name:            "init-nvme-tcp",
 		Image:           busyboxImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
-		SecurityContext: &v1.SecurityContext{Privileged: boolp(true)},
-		VolumeMounts: []v1.VolumeMount{
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		SecurityContext: &corev1.SecurityContext{Privileged: pointer.Bool(true)},
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: modulesDirVolume.Name, MountPath: "/lib/modules", MountPropagation: &mountPropagationHostToContainer},
 		},
 		Command: []string{
@@ -570,26 +575,26 @@ var (
 		Resources: defaultResourceLimits,
 	}
 
-	csiPluginNodeContainer = v1.Container{
+	csiPluginNodeContainer = corev1.Container{
 		Name:            "lb-csi-plugin",
 		Image:           lbCSIPluginImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
-		SecurityContext: &v1.SecurityContext{
-			Privileged:               boolp(true),
-			AllowPrivilegeEscalation: boolp(true),
-			Capabilities:             &v1.Capabilities{Add: []v1.Capability{"SYS_ADMIN"}},
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		SecurityContext: &corev1.SecurityContext{
+			Privileged:               pointer.Bool(true),
+			AllowPrivilegeEscalation: pointer.Bool(true),
+			Capabilities:             &corev1.Capabilities{Add: []corev1.Capability{"SYS_ADMIN"}},
 		},
 		Args: []string{"-P"},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "CSI_ENDPOINT", Value: "unix:///csi/csi.sock"},
-			{Name: "KUBE_NODE_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+			{Name: "KUBE_NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 			{Name: "LB_CSI_NODE_ID", Value: "$(KUBE_NODE_NAME).node"},
 			{Name: "LB_CSI_LOG_LEVEL", Value: "debug"},
 			{Name: "LB_CSI_LOG_ROLE", Value: "node"},
 			{Name: "LB_CSI_LOG_FMT", Value: "text"},
 			{Name: "LB_CSI_LOG_TIME", Value: "true"},
 		},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: pluginDirVolume.Name, MountPath: "/csi"},
 			{Name: podsMountDirVolume.Name, MountPath: "/var/lib/kubelet", MountPropagation: &mountPropagationBidirectional},
 			{Name: deviceDirVolume.Name, MountPath: "/dev"},
@@ -598,28 +603,28 @@ var (
 		Resources: defaultResourceLimits,
 	}
 
-	csiNodeDriverRegistrarContainer = v1.Container{
+	csiNodeDriverRegistrarContainer = corev1.Container{
 		Name:            "csi-node-driver-registrar",
 		Image:           csiNodeDriverRegistrarImage,
-		ImagePullPolicy: v1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args: []string{
 			"--v=4",
 			"--csi-address=$(ADDRESS)",
 			"--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)",
 		},
-		Env: []v1.EnvVar{
+		Env: []corev1.EnvVar{
 			{Name: "ADDRESS", Value: "/csi/csi.sock"},
 			{Name: "DRIVER_REG_SOCK_PATH", Value: "/var/lib/kubelet/plugins/csi.lightbitslabs.com/csi.sock"},
-			{Name: "KUBE_NODE_NAME", ValueFrom: &v1.EnvVarSource{FieldRef: &v1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+			{Name: "KUBE_NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 		},
-		Lifecycle: &v1.Lifecycle{PreStop: &v1.Handler{Exec: &v1.ExecAction{
+		Lifecycle: &corev1.Lifecycle{PreStop: &corev1.Handler{Exec: &corev1.ExecAction{
 			Command: []string{
 				"/bin/sh",
 				"-c",
 				"rm -rf /registration/csi.lightbitslabs.com /registration/csi.lightbitslabs.com-reg.sock",
 			},
 		}}},
-		VolumeMounts: []v1.VolumeMount{
+		VolumeMounts: []corev1.VolumeMount{
 			{Name: pluginDirVolume.Name, MountPath: "/csi"},
 			{Name: registrationDirVolume.Name, MountPath: "/registration/"},
 		},
@@ -627,53 +632,53 @@ var (
 	}
 
 	// Volumes
-	socketDirVolume = v1.Volume{
+	socketDirVolume = corev1.Volume{
 		Name:         "socket-dir",
-		VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
+		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
-	discoveryClientDirVolume = v1.Volume{
+	discoveryClientDirVolume = corev1.Volume{
 		Name:         "discovery-client-dir",
-		VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
+		VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 	}
-	registrationDirVolume = v1.Volume{
+	registrationDirVolume = corev1.Volume{
 		Name: "registration-dir",
-		VolumeSource: v1.VolumeSource{
-			HostPath: &v1.HostPathVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
 				Path: "/var/lib/kubelet/plugins_registry/",
 				Type: &hostPathDirectoryOrCreate,
 			},
 		},
 	}
-	pluginDirVolume = v1.Volume{
+	pluginDirVolume = corev1.Volume{
 		Name: "plugin-dir",
-		VolumeSource: v1.VolumeSource{
-			HostPath: &v1.HostPathVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
 				Path: "/var/lib/kubelet/plugins/csi.lightbitslabs.com",
 				Type: &hostPathDirectoryOrCreate,
 			},
 		},
 	}
-	podsMountDirVolume = v1.Volume{
+	podsMountDirVolume = corev1.Volume{
 		Name: "pods-mount-dir",
-		VolumeSource: v1.VolumeSource{
-			HostPath: &v1.HostPathVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
 				Path: "/var/lib/kubelet",
 				Type: &hostPathDirectory,
 			},
 		},
 	}
-	deviceDirVolume = v1.Volume{
+	deviceDirVolume = corev1.Volume{
 		Name: "device-dir",
-		VolumeSource: v1.VolumeSource{
-			HostPath: &v1.HostPathVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
 				Path: "/dev",
 			},
 		},
 	}
-	modulesDirVolume = v1.Volume{
+	modulesDirVolume = corev1.Volume{
 		Name: "modules-dir",
-		VolumeSource: v1.VolumeSource{
-			HostPath: &v1.HostPathVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
 				Path: "/lib/modules",
 			},
 		},
@@ -693,13 +698,13 @@ var (
 				Type:          apps.RollingUpdateDaemonSetStrategyType,
 				RollingUpdate: &apps.RollingUpdateDaemonSet{MaxUnavailable: &intstr.IntOrString{IntVal: 1}},
 			},
-			Template: v1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: nodeRoleLabels},
-				Spec: v1.PodSpec{
-					InitContainers: []v1.Container{
+				Spec: corev1.PodSpec{
+					InitContainers: []corev1.Container{
 						nodeInitContainer,
 					},
-					Containers: []v1.Container{
+					Containers: []corev1.Container{
 						csiPluginNodeContainer,
 						csiNodeDriverRegistrarContainer,
 						discoveryClientContainer,
@@ -707,7 +712,7 @@ var (
 					ServiceAccountName: nodeServiceAccount.Name,
 					PriorityClassName:  "system-node-critical",
 					HostNetwork:        true,
-					Volumes: []v1.Volume{
+					Volumes: []corev1.Volume{
 						registrationDirVolume,
 						pluginDirVolume,
 						podsMountDirVolume,
@@ -735,7 +740,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 		return fmt.Errorf("unable to create jwt token:%w", err)
 	}
 
-	storageClassSecret := v1.Secret{
+	storageClassSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: storageClassCredentialsRef, Namespace: namespace},
 	}
 
@@ -772,8 +777,8 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
 			csiDriver.Spec = storage.CSIDriverSpec{
-				AttachRequired: boolp(true),
-				PodInfoOnMount: boolp(true),
+				AttachRequired: pointer.Bool(true),
+				PodInfoOnMount: pointer.Bool(true),
 			}
 			return nil
 		})
@@ -786,8 +791,8 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
 			csiDriver.Spec = storagev1beta1.CSIDriverSpec{
-				AttachRequired: boolp(true),
-				PodInfoOnMount: boolp(true),
+				AttachRequired: pointer.Bool(true),
+				PodInfoOnMount: pointer.Bool(true),
 			}
 			return nil
 		})
@@ -816,7 +821,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	for i := range serviceAccounts {
 		sa := serviceAccounts[i]
-		obj := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace}}
+		obj := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			return nil
 		})
@@ -863,7 +868,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
 
 		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
-		containers := []v1.Container{
+		containers := []corev1.Container{
 			csiPluginContainer,
 			csiProvisionerContainer,
 			csiAttacherContainer,
@@ -876,14 +881,14 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		sts.Spec = apps.StatefulSetSpec{
 			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
 			ServiceName: "lb-csi-ctrl-svc",
-			Replicas:    int32p(1),
-			Template: v1.PodTemplateSpec{
+			Replicas:    pointer.Int32(1),
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
-				Spec: v1.PodSpec{
+				Spec: corev1.PodSpec{
 					Containers:         containers,
 					ServiceAccountName: ctrlServiceAccount.Name,
 					PriorityClassName:  "system-cluster-critical",
-					Volumes: []v1.Volume{
+					Volumes: []corev1.Volume{
 						socketDirVolume,
 					},
 				},
@@ -912,7 +917,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			obj.Provisioner = provisioner
-			obj.AllowVolumeExpansion = boolp(true)
+			obj.AllowVolumeExpansion = pointer.Bool(true)
 			obj.Parameters = map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",
@@ -945,9 +950,83 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	return nil
 }
 
-func boolp(b bool) *bool {
-	return &b
-}
-func int32p(i int32) *int32 {
-	return &i
+func (r *DurosReconciler) cleanupStorageClass(ctx context.Context, scs []storagev1.StorageClass) error {
+	log := r.Log.WithName("storage-class")
+	log.Info("cleanup storage-class")
+
+	type deletionResource struct {
+		Key    types.NamespacedName
+		Object client.Object
+	}
+
+	resources := []deletionResource{
+		{
+			Key:    types.NamespacedName{Name: lbCSINodeName, Namespace: namespace},
+			Object: &appsv1.DaemonSet{},
+		},
+		{
+			Key:    types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace},
+			Object: &appsv1.StatefulSet{},
+		},
+		{
+			Key:    types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace},
+			Object: &corev1.Secret{},
+		},
+	}
+
+	for i := range clusterRoleBindings {
+		crb := clusterRoleBindings[i]
+		resources = append(resources, deletionResource{
+			Key:    types.NamespacedName{Name: crb.Name, Namespace: crb.Namespace},
+			Object: &rbac.ClusterRoleBinding{},
+		})
+	}
+
+	for i := range clusterRoles {
+		cr := clusterRoles[i]
+		resources = append(resources, deletionResource{
+			Key:    types.NamespacedName{Name: cr.Name, Namespace: cr.Namespace},
+			Object: &rbac.ClusterRole{},
+		})
+	}
+
+	for i := range serviceAccounts {
+		sa := serviceAccounts[i]
+		resources = append(resources, deletionResource{
+			Key:    types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace},
+			Object: &corev1.ServiceAccount{},
+		})
+	}
+
+	for i := range psps {
+		psp := psps[i]
+		resources = append(resources, deletionResource{
+			Key:    types.NamespacedName{Name: psp.Name},
+			Object: &policy.PodSecurityPolicy{},
+		})
+	}
+
+	for i := range scs {
+		sc := scs[i]
+		resources = append(resources, deletionResource{
+			Key:    types.NamespacedName{Name: sc.Name},
+			Object: &storage.StorageClass{},
+		})
+	}
+
+	for _, resource := range resources {
+		resource := resource
+		err := r.Shoot.Get(ctx, resource.Key, resource.Object)
+		if err == nil {
+			log.Info("cleaning up resource", "name", resource.Key.Name, "namespace", resource.Key.Namespace)
+			err = r.Shoot.Delete(ctx, resource.Object)
+			if err != nil {
+				return fmt.Errorf("error cleaning up resource during deletion flow: %w", err)
+			}
+		} else if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error getting resource during deletion flow: %w", err)
+		}
+	}
+
+	return nil
 }

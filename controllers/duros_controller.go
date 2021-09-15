@@ -36,10 +36,6 @@ import (
 	v1 "github.com/metal-stack/duros-controller/api/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
-	rbac "k8s.io/api/rbac/v1"
-	storage "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,7 +99,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	} else {
 		// object is being deleted
 		if containsString(duros.GetFinalizers(), DurosFinalizerName) {
-			if err := r.Cleanup(ctx, storageClasses); err != nil {
+			if err := r.cleanupStorageClass(ctx, storageClasses); err != nil {
 				return requeue, err
 			}
 
@@ -149,84 +145,6 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		// and status is updated regularly
 		RequeueAfter: 30 * time.Second,
 	}, nil
-}
-
-func (r *DurosReconciler) Cleanup(ctx context.Context, scs []storagev1.StorageClass) error {
-	type deletionResource struct {
-		Key    types.NamespacedName
-		Object client.Object
-	}
-
-	resources := []deletionResource{
-		{
-			Key:    types.NamespacedName{Name: lbCSINodeName, Namespace: namespace},
-			Object: &appsv1.DaemonSet{},
-		},
-		{
-			Key:    types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace},
-			Object: &appsv1.StatefulSet{},
-		},
-		{
-			Key:    types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace},
-			Object: &corev1.Secret{},
-		},
-	}
-
-	for i := range clusterRoleBindings {
-		crb := clusterRoleBindings[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: crb.Name, Namespace: crb.Namespace},
-			Object: &rbac.ClusterRoleBinding{},
-		})
-	}
-
-	for i := range clusterRoles {
-		cr := clusterRoles[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: cr.Name, Namespace: cr.Namespace},
-			Object: &rbac.ClusterRole{},
-		})
-	}
-
-	for i := range serviceAccounts {
-		sa := serviceAccounts[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace},
-			Object: &corev1.ServiceAccount{},
-		})
-	}
-
-	for i := range psps {
-		psp := psps[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: psp.Name},
-			Object: &policy.PodSecurityPolicy{},
-		})
-	}
-
-	for i := range scs {
-		sc := scs[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: sc.Name},
-			Object: &storage.StorageClass{},
-		})
-	}
-
-	for _, resource := range resources {
-		resource := resource
-		err := r.Shoot.Get(ctx, resource.Key, resource.Object)
-		if err == nil {
-			r.Log.Info("cleaning up resource", "name", resource.Key.Name, "namespace", resource.Key.Namespace)
-			err = r.Shoot.Delete(ctx, resource.Object)
-			if err != nil {
-				return fmt.Errorf("error cleaning up resource during deletion flow: %w", err)
-			}
-		} else if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("error getting resource during deletion flow: %w", err)
-		}
-	}
-
-	return nil
 }
 
 func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
