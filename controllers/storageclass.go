@@ -682,7 +682,11 @@ var (
 	// Node DaemonSet
 	nodeRoleLabels   = map[string]string{"app": lbCSINodeName, "role": "node"}
 	csiNodeDaemonSet = apps.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: lbCSINodeName, Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lbCSINodeName,
+			Namespace: namespace,
+			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+		},
 		Spec: apps.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: nodeRoleLabels},
 			UpdateStrategy: apps.DaemonSetUpdateStrategy{
@@ -849,7 +853,13 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
 	}
 
-	sts := &apps.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: lbCSIControllerName, Namespace: namespace}}
+	sts := &apps.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lbCSIControllerName,
+			Namespace: namespace,
+			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+		},
+	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
 
 		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
