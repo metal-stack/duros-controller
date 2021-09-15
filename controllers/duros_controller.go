@@ -114,7 +114,12 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return requeue, err
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{
+		// we requeue in a small interval to ensure resources are recreated quickly
+		// and status is updated regularly
+		Requeue:      true,
+		RequeueAfter: 1 * time.Minute,
+	}, nil
 }
 
 func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.Duros) error {

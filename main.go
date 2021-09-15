@@ -20,7 +20,6 @@ import (
 	"context"
 	"flag"
 	"os"
-	"time"
 
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -44,8 +43,6 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
-
-	syncPeriod = 1 * time.Minute
 )
 
 func init() {
@@ -97,7 +94,6 @@ func main() {
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "duros-controller-leader-election",
 		Namespace:          namespace,
-		SyncPeriod:         &syncPeriod,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start duros-controller")
