@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.94.1 // indirect
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
+	github.com/golang-jwt/jwt/v4 v4.0.0
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/metal-stack/duros-go v0.2.3
 	github.com/metal-stack/v v1.0.3
