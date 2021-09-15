@@ -21,8 +21,10 @@ import (
 	"flag"
 	"os"
 
+	"go.uber.org/zap"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/go-logr/zapr"
 	v2 "github.com/metal-stack/duros-go/api/duros/v2"
 	"github.com/metal-stack/v"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,7 +34,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
@@ -53,6 +54,7 @@ func init() {
 
 func main() {
 	var (
+		logLevel             string
 		metricsAddr          string
 		enableLeaderElection bool
 		shootKubeconfig      string
@@ -66,6 +68,7 @@ func main() {
 		apiKey      string
 		apiCert     string
 	)
+	flag.StringVar(&logLevel, "log-level", "", "The log level of the controller.")
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -83,7 +86,25 @@ func main() {
 
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	level := zap.InfoLevel
+	if len(logLevel) > 0 {
+		err := level.UnmarshalText([]byte(logLevel))
+		if err != nil {
+			setupLog.Error(err, "can't initialize zap logger")
+			os.Exit(1)
+		}
+	}
+
+	cfg := zap.NewProductionConfig()
+	cfg.Level = zap.NewAtomicLevelAt(level)
+
+	l, err := cfg.Build()
+	if err != nil {
+		setupLog.Error(err, "can't initialize zap logger")
+		os.Exit(1)
+	}
+
+	ctrl.SetLogger(zapr.NewLogger(l))
 
 	restConfig := ctrl.GetConfigOrDie()
 
@@ -135,7 +156,7 @@ func main() {
 		Token:     string(at),
 		Endpoints: durosEPs,
 		Scheme:    duros.GRPCS,
-		Log:       zap.NewRaw().Sugar(),
+		Log:       l.Sugar(),
 		UserAgent: "duros-controller",
 	}
 

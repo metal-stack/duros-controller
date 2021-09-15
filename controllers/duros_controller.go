@@ -99,7 +99,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	} else {
 		// object is being deleted
 		if containsString(duros.GetFinalizers(), DurosFinalizerName) {
-			if err := r.cleanupStorageClass(ctx); err != nil {
+			if err := r.cleanupResources(ctx); err != nil {
 				return requeue, err
 			}
 
@@ -129,8 +129,8 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		return requeue, err
 	}
-	// Deploy StorageClass
-	err = r.deployStorageClass(ctx, projectID, storageClasses)
+	// Deploy CSI
+	err = r.deployCSI(ctx, projectID, storageClasses)
 	if err != nil {
 		return requeue, err
 	}

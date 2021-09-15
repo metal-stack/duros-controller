@@ -759,8 +759,8 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 	return err
 }
 
-func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID string, scs []storagev1.StorageClass) error {
-	log := r.Log.WithName("storage-class")
+func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs []storagev1.StorageClass) error {
+	log := r.Log.WithName("storage-csi")
 	log.Info("deploy storage-class")
 
 	rm := r.Shoot.RESTMapper()
@@ -957,9 +957,9 @@ type deletionResource struct {
 	Object client.Object
 }
 
-func (r *DurosReconciler) cleanupStorageClass(ctx context.Context) error {
-	log := r.Log.WithName("storage-class")
-	log.Info("cleanup storage-class")
+func (r *DurosReconciler) cleanupResources(ctx context.Context) error {
+	log := r.Log.WithName("storage-csi")
+	log.Info("cleanup csi")
 
 	resources := []deletionResource{
 		{
