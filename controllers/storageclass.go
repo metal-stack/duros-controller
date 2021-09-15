@@ -18,7 +18,6 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	storage "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1040,7 +1039,7 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 	return wait.PollImmediateInfiniteWithContext(ctx, 100*time.Millisecond, func(context.Context) (done bool, err error) {
 		err = r.Shoot.Delete(ctx, resource.Object)
 
-		if errors.IsNotFound(err) || errors.IsConflict(err) {
+		if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 			return true, nil
 		}
 
