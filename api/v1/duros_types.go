@@ -27,6 +27,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="ProjectID",type=string,JSONPath=`.spec.metalProjectID`
 // +kubebuilder:printcolumn:name="StorageClasses",type=string,JSONPath=`.spec.storageClasses`
+// +kubebuilder:subresource:status
 type Duros struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -57,7 +58,33 @@ type DurosStatus struct {
 	// SecretRef to the create JWT Token
 	// TODO, this can be used to detect required key rotation
 	SecretRef string `json:"secret,omitempty" description:"Reference to JWT Token generated on the duros storage side for this project"`
+
+	// ManagedResourceStatuses contains a list of statuses of resources managed by this controller
+	ManagedResourceStatuses []ManagedResourceStatus `json:"managedResourceStatuses" description:"A list of managed resource statuses"`
 }
+
+type ManagedResourceStatus struct {
+	// Name is the name of the resource described by this status
+	Name string `json:"name" description:"The name of the resource"`
+	// Group is the api group kind of the resource described by this status
+	Group string `json:"group" description:"The group kind of the resource"`
+	// State is the actual state of the managed resource
+	State HealthState `json:"state" description:"The state of this resource"`
+	// Description further describes the state of the managed resource
+	Description string `json:"description" description:"The description of the state of this component"`
+	// LastUpdateTime is the last time the status was updated
+	LastUpdateTime metav1.Time `json:"lastUpdateTime" description:"The time when this status was last updated"`
+}
+
+// HealthState describes the state of a managed resource
+type HealthState string
+
+const (
+	// HealthStateRunning indicates that the resource is running
+	HealthStateRunning HealthState = "Running"
+	// HealthStateNotRunning indicates that the resource is not running
+	HealthStateNotRunning HealthState = "Not Running"
+)
 
 // StorageClass defines the storageClass parameters
 type StorageClass struct {

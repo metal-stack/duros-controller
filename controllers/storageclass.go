@@ -28,6 +28,9 @@ const (
 	provisioner = "csi.lightbitslabs.com"
 
 	storageClassCredentialsRef = "lb-csi-creds"
+
+	lbCSIControllerName = "lb-csi-controller"
+	lbCSINodeName       = "lb-csi-node"
 )
 
 var (
@@ -677,9 +680,9 @@ var (
 	}
 
 	// Node DaemonSet
-	nodeRoleLabels   = map[string]string{"app": "lb-csi-node", "role": "node"}
+	nodeRoleLabels   = map[string]string{"app": lbCSINodeName, "role": "node"}
 	csiNodeDaemonSet = apps.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "lb-csi-node", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: lbCSINodeName, Namespace: namespace},
 		Spec: apps.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{MatchLabels: nodeRoleLabels},
 			UpdateStrategy: apps.DaemonSetUpdateStrategy{
@@ -846,7 +849,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
 	}
 
-	sts := &apps.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "lb-csi-controller", Namespace: namespace}}
+	sts := &apps.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: lbCSIControllerName, Namespace: namespace}}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
 
 		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}

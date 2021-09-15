@@ -23,15 +23,19 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	v1 "github.com/metal-stack/duros-controller/api/v1"
+
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DurosReconciler reconciles a Duros object
@@ -39,7 +43,6 @@ type DurosReconciler struct {
 	client.Client
 	Shoot       client.Client
 	Log         logr.Logger
-	Scheme      *runtime.Scheme
 	Namespace   string
 	DurosClient durosv2.DurosAPIClient
 	Endpoints   duros.EPs
@@ -66,12 +69,13 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 	// first get the metal-api projectID
-	var duros storagev1.Duros
-	if err := r.Get(ctx, req.NamespacedName, &duros); err != nil {
+	duros := &storagev1.Duros{}
+	if err := r.Get(ctx, req.NamespacedName, duros); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("no duros storage defined")
-			return requeue, err
+			return ctrl.Result{}, nil
 		}
+		return requeue, err
 	}
 	err := validateDuros(duros)
 	if err != nil {
@@ -102,17 +106,90 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		return requeue, err
 	}
-	return ctrl.Result{}, nil
+
+	err = r.reconcileStatus(ctx, duros)
+	if err != nil {
+		return requeue, err
+	}
+
+	return ctrl.Result{
+		// we requeue in a small interval to ensure resources are recreated quickly
+		// and status is updated regularly
+		RequeueAfter: 30 * time.Second,
+	}, nil
+}
+
+func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
+	var (
+		updateTime = metav1.NewTime(time.Now())
+		ds         = &appsv1.DaemonSet{}
+		sts        = &appsv1.StatefulSet{}
+	)
+
+	duros.Status.SecretRef = "" // TODO?
+
+	err := r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSINodeName, Namespace: namespace}, ds)
+	if err != nil {
+		return fmt.Errorf("error getting daemon set: %w", err)
+	}
+
+	dsStatus := v1.ManagedResourceStatus{
+		Name:           ds.Name,
+		Group:          "DaemonSet", // ds.GetObjectKind().GroupVersionKind().String() --> this does not work :(
+		State:          v1.HealthStateRunning,
+		Description:    "All replicas are ready",
+		LastUpdateTime: updateTime,
+	}
+
+	if ds.Status.DesiredNumberScheduled != ds.Status.NumberReady {
+		dsStatus.State = v1.HealthStateNotRunning
+		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
+	}
+
+	err = r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace}, sts)
+	if err != nil {
+		return fmt.Errorf("error getting statefulset: %w", err)
+	}
+
+	stsStatus := v1.ManagedResourceStatus{
+		Name:           sts.Name,
+		Group:          "StatefulSet", // sts.GetObjectKind().GroupVersionKind().String() --> this does not work :(
+		State:          v1.HealthStateRunning,
+		Description:    "All replicas are ready",
+		LastUpdateTime: updateTime,
+	}
+
+	replicas := int32(1)
+	if sts.Spec.Replicas != nil {
+		replicas = *sts.Spec.Replicas
+	}
+
+	if replicas != sts.Status.ReadyReplicas {
+		stsStatus.State = v1.HealthStateNotRunning
+		stsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", sts.Status.ReadyReplicas, replicas)
+	}
+
+	duros.Status.ManagedResourceStatuses = []v1.ManagedResourceStatus{dsStatus, stsStatus}
+	err = r.Status().Update(ctx, duros)
+	if err != nil {
+		return fmt.Errorf("error updating status: %w", err)
+	}
+
+	r.Log.Info("status updated", "name", duros.Name)
+
+	return nil
 }
 
 // SetupWithManager boilerplate to setup the Reconciler
 func (r *DurosReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	pred := predicate.GenerationChangedPredicate{} // prevents reconcile on status sub resource update
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&storagev1.Duros{}).
+		WithEventFilter(pred).
 		Complete(r)
 }
 
-func validateDuros(duros v1.Duros) error {
+func validateDuros(duros *v1.Duros) error {
 	if len(duros.Spec.MetalProjectID) == 0 {
 		return fmt.Errorf("metalProjectID is empty")
 	}
