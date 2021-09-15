@@ -71,7 +71,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 	// first get the metal-api projectID
-	var duros *storagev1.Duros
+	duros := &storagev1.Duros{}
 	if err := r.Get(ctx, req.NamespacedName, duros); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("no duros storage defined")
