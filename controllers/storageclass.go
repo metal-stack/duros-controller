@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
@@ -17,12 +18,14 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	storage "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -950,14 +953,14 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 	return nil
 }
 
+type deletionResource struct {
+	Key    types.NamespacedName
+	Object client.Object
+}
+
 func (r *DurosReconciler) cleanupStorageClass(ctx context.Context, scs []storagev1.StorageClass) error {
 	log := r.Log.WithName("storage-class")
 	log.Info("cleanup storage-class")
-
-	type deletionResource struct {
-		Key    types.NamespacedName
-		Object client.Object
-	}
 
 	resources := []deletionResource{
 		{
@@ -1015,18 +1018,35 @@ func (r *DurosReconciler) cleanupStorageClass(ctx context.Context, scs []storage
 	}
 
 	for _, resource := range resources {
-		resource := resource
-		err := r.Shoot.Get(ctx, resource.Key, resource.Object)
-		if err == nil {
-			log.Info("cleaning up resource", "name", resource.Key.Name, "namespace", resource.Key.Namespace)
-			err = r.Shoot.Delete(ctx, resource.Object)
-			if err != nil {
-				return fmt.Errorf("error cleaning up resource during deletion flow: %w", err)
-			}
-		} else if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("error getting resource during deletion flow: %w", err)
+		if err := r.deleteResourceWithWait(ctx, log, resource); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.Logger, resource deletionResource) error {
+	err := r.Shoot.Get(ctx, resource.Key, resource.Object)
+	if err != nil && apierrors.IsNotFound(err) {
+		// already deleted
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("error getting resource during deletion flow: %w", err)
+	}
+
+	log.Info("cleaning up resource", "name", resource.Key.Name, "namespace", resource.Key.Namespace)
+	return wait.PollImmediateInfiniteWithContext(ctx, 100*time.Millisecond, func(context.Context) (done bool, err error) {
+		err = r.Shoot.Delete(ctx, resource.Object)
+		if err != nil {
+			return false, fmt.Errorf("error cleaning up resource during deletion flow: %w", err)
+		}
+
+		if errors.IsNotFound(err) || errors.IsConflict(err) {
+			return true, nil
+		}
+
+		return false, err
+	})
 }
