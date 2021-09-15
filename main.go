@@ -26,6 +26,7 @@ import (
 	v2 "github.com/metal-stack/duros-go/api/duros/v2"
 	"github.com/metal-stack/v"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
@@ -45,9 +46,8 @@ var (
 )
 
 func init() {
-	_ = clientgoscheme.AddToScheme(scheme)
-
-	_ = storagev1.AddToScheme(scheme)
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(storagev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -110,7 +110,7 @@ func main() {
 			setupLog.Error(err, "unable to create shoot restconfig")
 			os.Exit(1)
 		}
-		shootClient, err = client.New(shootRestConfig, client.Options{})
+		shootClient, err = client.New(shootRestConfig, client.Options{Scheme: scheme})
 		if err != nil {
 			setupLog.Error(err, "unable to create shoot client")
 			os.Exit(1)

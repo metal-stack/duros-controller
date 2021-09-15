@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
@@ -70,12 +71,13 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 	// first get the metal-api projectID
-	var duros storagev1.Duros
-	if err := r.Get(ctx, req.NamespacedName, &duros); err != nil {
+	var duros *storagev1.Duros
+	if err := r.Get(ctx, req.NamespacedName, duros); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("no duros storage defined")
-			return requeue, err
+			return ctrl.Result{}, nil
 		}
+		return requeue, err
 	}
 	err := validateDuros(duros)
 	if err != nil {
@@ -115,7 +117,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{}, nil
 }
 
-func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros storagev1.Duros) error {
+func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
 	var (
 		updateTime = metav1.NewTime(time.Now())
 		ds         = &appsv1.DaemonSet{}
@@ -166,7 +168,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros storagev1.D
 	}
 
 	duros.Status.ManagedResourceStatuses = []v1.ManagedResourceStatus{dsStatus, stsStatus}
-	err = r.Status().Update(ctx, &duros)
+	err = r.Status().Update(ctx, duros)
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
 	}
@@ -176,12 +178,14 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros storagev1.D
 
 // SetupWithManager boilerplate to setup the Reconciler
 func (r *DurosReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	pred := predicate.GenerationChangedPredicate{} // prevents reconcile on status sub resource update
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&storagev1.Duros{}).
+		WithEventFilter(pred).
 		Complete(r)
 }
 
-func validateDuros(duros v1.Duros) error {
+func validateDuros(duros *v1.Duros) error {
 	if len(duros.Spec.MetalProjectID) == 0 {
 		return fmt.Errorf("metalProjectID is empty")
 	}
