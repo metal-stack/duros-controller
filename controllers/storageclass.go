@@ -28,6 +28,9 @@ const (
 	provisioner = "csi.lightbitslabs.com"
 
 	storageClassCredentialsRef = "lb-csi-creds"
+
+	lbCSIControllerName = "lb-csi-controller"
+	lbCSINodeName       = "lb-csi-node"
 )
 
 var (
@@ -677,10 +680,10 @@ var (
 	}
 
 	// Node DaemonSet
-	nodeRoleLabels   = map[string]string{"app": "lb-csi-node", "role": "node"}
+	nodeRoleLabels   = map[string]string{"app": lbCSINodeName, "role": "node"}
 	csiNodeDaemonSet = apps.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "lb-csi-node",
+			Name:      lbCSINodeName,
 			Namespace: namespace,
 			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 		},
@@ -852,7 +855,7 @@ func (r *DurosReconciler) deployStorageClass(ctx context.Context, projectID stri
 
 	sts := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "lb-csi-controller",
+			Name:      lbCSIControllerName,
 			Namespace: namespace,
 			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 		},
