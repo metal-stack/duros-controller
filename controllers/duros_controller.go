@@ -133,7 +133,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	dsStatus := v1.ManagedResourceStatus{
 		Name:           ds.Name,
-		Group:          ds.GetObjectKind().GroupVersionKind().String(),
+		Group:          ds.GroupVersionKind().String(),
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
@@ -151,7 +151,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	stsStatus := v1.ManagedResourceStatus{
 		Name:           sts.Name,
-		Group:          sts.GetObjectKind().GroupVersionKind().String(),
+		Group:          sts.GroupVersionKind().String(),
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
@@ -172,6 +172,8 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
 	}
+
+	r.Log.Info("status updated")
 
 	return nil
 }
