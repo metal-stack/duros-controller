@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,7 +43,6 @@ type DurosReconciler struct {
 	client.Client
 	Shoot       client.Client
 	Log         logr.Logger
-	Scheme      *runtime.Scheme
 	Namespace   string
 	DurosClient durosv2.DurosAPIClient
 	Endpoints   duros.EPs
@@ -117,8 +115,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{
 		// we requeue in a small interval to ensure resources are recreated quickly
 		// and status is updated regularly
-		Requeue:      true,
-		RequeueAfter: 1 * time.Minute,
+		RequeueAfter: 30 * time.Second,
 	}, nil
 }
 
@@ -138,7 +135,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	dsStatus := v1.ManagedResourceStatus{
 		Name:           ds.Name,
-		Group:          ds.GroupVersionKind().String(),
+		Group:          ds.Kind,
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
@@ -156,7 +153,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 
 	stsStatus := v1.ManagedResourceStatus{
 		Name:           sts.Name,
-		Group:          sts.GroupVersionKind().String(),
+		Group:          sts.Kind,
 		State:          v1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,

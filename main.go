@@ -193,7 +193,6 @@ func main() {
 		Client:      mgr.GetClient(),
 		Shoot:       shootClient,
 		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
-		Scheme:      mgr.GetScheme(),
 		Namespace:   namespace,
 		DurosClient: durosClient,
 		Endpoints:   durosEPs,
