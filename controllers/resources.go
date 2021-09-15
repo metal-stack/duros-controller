@@ -762,7 +762,7 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 
-	claims := jwt.StandardClaims{}
+	claims := &jwt.StandardClaims{}
 	_, _, err = new(jwt.Parser).ParseUnverified(string(token), claims)
 	if err != nil {
 		log.Error(err, "token not parsable, recreating storage-class-secret")
