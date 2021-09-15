@@ -99,7 +99,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	} else {
 		// object is being deleted
 		if containsString(duros.GetFinalizers(), DurosFinalizerName) {
-			if err := r.cleanupStorageClass(ctx, storageClasses); err != nil {
+			if err := r.cleanupStorageClass(ctx); err != nil {
 				return requeue, err
 			}
 

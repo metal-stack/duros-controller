@@ -957,7 +957,7 @@ type deletionResource struct {
 	Object client.Object
 }
 
-func (r *DurosReconciler) cleanupStorageClass(ctx context.Context, scs []storagev1.StorageClass) error {
+func (r *DurosReconciler) cleanupStorageClass(ctx context.Context) error {
 	log := r.Log.WithName("storage-class")
 	log.Info("cleanup storage-class")
 
@@ -1008,15 +1008,7 @@ func (r *DurosReconciler) cleanupStorageClass(ctx context.Context, scs []storage
 		})
 	}
 
-	for i := range scs {
-		sc := scs[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: sc.Name},
-			Object: &storage.StorageClass{},
-		})
-	}
-
-	// we don't clean up the CSI driver because there can be volumes that still reference it
+	// we don't clean up the storage classes and CSI driver because there can be volumes that still reference it
 
 	for _, resource := range resources {
 		if err := r.deleteResourceWithWait(ctx, log, resource); err != nil {
