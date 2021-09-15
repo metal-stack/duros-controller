@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/metal-stack/duros-go"
@@ -36,6 +37,10 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	DurosFinalizerName = "storage.metal-stack.io/finalizer"
 )
 
 // DurosReconciler reconciles a Duros object
@@ -84,6 +89,29 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	projectID := duros.Spec.MetalProjectID
 	storageClasses := duros.Spec.StorageClasses
 
+	if duros.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !containsString(duros.GetFinalizers(), DurosFinalizerName) {
+			controllerutil.AddFinalizer(duros, DurosFinalizerName)
+			if err := r.Update(ctx, duros); err != nil {
+				return requeue, err
+			}
+		}
+	} else {
+		// object is being deleted
+		if containsString(duros.GetFinalizers(), DurosFinalizerName) {
+			if err := r.cleanupResources(ctx); err != nil {
+				return requeue, err
+			}
+
+			controllerutil.RemoveFinalizer(duros, DurosFinalizerName)
+			if err := r.Update(ctx, duros); err != nil {
+				return requeue, err
+			}
+		}
+
+		return ctrl.Result{}, nil
+	}
+
 	p, err := r.createProjectIfNotExist(ctx, projectID)
 	if err != nil {
 		return requeue, err
@@ -101,8 +129,8 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		return requeue, err
 	}
-	// Deploy StorageClass
-	err = r.deployStorageClass(ctx, projectID, storageClasses)
+	// Deploy CSI
+	err = r.deployCSI(ctx, projectID, storageClasses)
 	if err != nil {
 		return requeue, err
 	}
@@ -205,4 +233,13 @@ func validateDuros(duros *v1.Duros) error {
 		}
 	}
 	return nil
+}
+
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
