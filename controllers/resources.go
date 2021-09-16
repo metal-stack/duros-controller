@@ -40,8 +40,12 @@ const (
 	lbCSIControllerName = "lb-csi-controller"
 	lbCSINodeName       = "lb-csi-node"
 
-	tokenLifetime      = 360 * 24 * time.Hour
-	tokenRenewalBefore = 7 * 24 * time.Hour
+	// tokenLifetime      = 360 * 24 * time.Hour
+	// tokenRenewalBefore = 7 * 24 * time.Hour
+
+	// FIXME: Just for testing
+	tokenLifetime      = 5 * time.Minute
+	tokenRenewalBefore = 15 * time.Minute
 )
 
 var (
