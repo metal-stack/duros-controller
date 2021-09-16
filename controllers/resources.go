@@ -777,12 +777,13 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 	}
 
 	expiresAt := time.Unix(claims.ExpiresAt, 0)
-	if time.Now().After(expiresAt.Add(-tokenRenewalBefore)) {
+	renewalAt := expiresAt.Add(-tokenRenewalBefore)
+	if time.Now().After(renewalAt) {
 		log.Info("storage class token is expiring soon, refreshing token", "expires-at", expiresAt.String())
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 
-	log.Info("storage class token is not expiring soon, not doing anything", "expires-at", expiresAt.String())
+	log.Info("storage class token is not expiring soon, not doing anything", "expires-at", expiresAt.String(), "renewal-at", renewalAt.String())
 
 	return nil
 }

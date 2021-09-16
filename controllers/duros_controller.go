@@ -124,12 +124,11 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	log.Info("created credential", "id", cred.ID, "project", cred.ProjectName)
 
-	// Deploy StorageClass Secret
 	err = r.reconcileStorageClassSecret(ctx, cred, r.AdminKey)
 	if err != nil {
 		return requeue, err
 	}
-	// Deploy CSI
+
 	err = r.deployCSI(ctx, projectID, storageClasses)
 	if err != nil {
 		return requeue, err
