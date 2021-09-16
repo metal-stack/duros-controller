@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
@@ -38,6 +39,9 @@ const (
 
 	lbCSIControllerName = "lb-csi-controller"
 	lbCSINodeName       = "lb-csi-node"
+
+	tokenLifetime      = 8 * 24 * time.Hour
+	tokenRenewalBefore = 1 * 24 * time.Hour
 )
 
 var (
@@ -728,15 +732,68 @@ var (
 	}
 )
 
-func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credential *durosv2.Credential, adminKey []byte) error {
+func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, credential *durosv2.Credential, adminKey []byte) error {
+	var (
+		log    = r.Log.WithName("storage-class")
+		secret = &corev1.Secret{}
+	)
+
+	key := types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace}
+	err := r.Shoot.Get(ctx, key, secret)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("deploy storage-class-secret")
+		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
+	}
+	if err != nil {
+		return fmt.Errorf("unable to read secret: %w", err)
+	}
+
+	// secret already exists, check for renewal
+	token, ok := secret.Data["jwt"]
+	if !ok {
+		log.Error(fmt.Errorf("no storage class token present in existing token"), "recreating storage-class-secret")
+		err := r.deleteResourceWithWait(ctx, log, deletionResource{
+			Key:    key,
+			Object: secret,
+		})
+		if err != nil {
+			return err
+		}
+		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
+	}
+
+	claims := &jwt.StandardClaims{}
+	_, _, err = new(jwt.Parser).ParseUnverified(string(token), claims)
+	if err != nil {
+		log.Error(err, "storage class token not parsable, recreating storage-class-secret")
+		err := r.deleteResourceWithWait(ctx, log, deletionResource{
+			Key:    key,
+			Object: secret,
+		})
+		if err != nil {
+			return err
+		}
+		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
+	}
+
+	expiresAt := time.Unix(claims.ExpiresAt, 0)
+	renewalAt := expiresAt.Add(-tokenRenewalBefore)
+	if time.Now().After(renewalAt) {
+		log.Info("storage class token is expiring soon, refreshing token", "expires-at", expiresAt.String())
+		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
+	}
+
+	log.Info("storage class token is not expiring soon, not doing anything", "expires-at", expiresAt.String(), "renewal-at", renewalAt.String())
+
+	return nil
+}
+
+func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, log logr.Logger, credential *durosv2.Credential, adminKey []byte) error {
 	key, err := extract(adminKey)
 	if err != nil {
 		return err
 	}
-	log := r.Log.WithName("storage-class")
-	log.Info("deploy storage-class-secret")
 
-	tokenLifetime := 360 * 24 * time.Hour
 	token, err := duros.NewJWTTokenForCredential(r.Namespace, "duros-controller", credential, []string{credential.ProjectName + ":admin"}, tokenLifetime, key)
 	if err != nil {
 		return fmt.Errorf("unable to create jwt token:%w", err)
@@ -754,9 +811,13 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, credenti
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
 	log.Info("storageclasssecret", "name", storageClassCredentialsRef, "operation", op)
 
-	return err
+	return nil
 }
 
 func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs []storagev1.StorageClass) error {

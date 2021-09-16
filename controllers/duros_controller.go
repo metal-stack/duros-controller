@@ -124,12 +124,11 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	log.Info("created credential", "id", cred.ID, "project", cred.ProjectName)
 
-	// Deploy StorageClass Secret
-	err = r.deployStorageClassSecret(ctx, cred, r.AdminKey)
+	err = r.reconcileStorageClassSecret(ctx, cred, r.AdminKey)
 	if err != nil {
 		return requeue, err
 	}
-	// Deploy CSI
+
 	err = r.deployCSI(ctx, projectID, storageClasses)
 	if err != nil {
 		return requeue, err
@@ -153,8 +152,6 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 		ds         = &appsv1.DaemonSet{}
 		sts        = &appsv1.StatefulSet{}
 	)
-
-	duros.Status.SecretRef = "" // TODO?
 
 	err := r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSINodeName, Namespace: namespace}, ds)
 	if err != nil {

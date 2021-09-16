@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/go-logr/zapr"
@@ -97,6 +98,8 @@ func main() {
 
 	cfg := zap.NewProductionConfig()
 	cfg.Level = zap.NewAtomicLevelAt(level)
+	cfg.EncoderConfig.TimeKey = "timestamp"
+	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	l, err := cfg.Build()
 	if err != nil {
