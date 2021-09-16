@@ -45,7 +45,7 @@ const (
 
 	// FIXME: Just for testing
 	tokenLifetime      = 5 * time.Minute
-	tokenRenewalBefore = 15 * time.Minute
+	tokenRenewalBefore = -5 * time.Minute
 )
 
 var (
@@ -782,7 +782,7 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 
 	expiresAt := time.Unix(claims.ExpiresAt, 0)
 	if time.Now().After(expiresAt.Add(-tokenRenewalBefore)) {
-		log.Info("storage class token is expiring soon at %s, refreshing token")
+		log.Info("storage class token is expiring soon, refreshing token", "expires-at", expiresAt.String())
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 
