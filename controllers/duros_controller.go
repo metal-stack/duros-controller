@@ -224,12 +224,3 @@ func validateDuros(duros *v1.Duros) error {
 	}
 	return nil
 }
-
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
-}
