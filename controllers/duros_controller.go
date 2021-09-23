@@ -98,13 +98,17 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	} else {
 		// object is being deleted
+		// we don't pass the cancelled context here because then our deletion
+		// procedure will stop prematurely
+		deletionCtx := context.Background()
+
 		if containsString(duros.GetFinalizers(), DurosFinalizerName) {
-			if err := r.cleanupResources(ctx); err != nil {
+			if err := r.cleanupResources(deletionCtx); err != nil {
 				return requeue, err
 			}
 
 			controllerutil.RemoveFinalizer(duros, DurosFinalizerName)
-			if err := r.Update(ctx, duros); err != nil {
+			if err := r.Update(deletionCtx, duros); err != nil {
 				return requeue, err
 			}
 		}
