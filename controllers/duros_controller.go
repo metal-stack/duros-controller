@@ -88,23 +88,6 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	projectID := duros.Spec.MetalProjectID
 	storageClasses := duros.Spec.StorageClasses
 
-	// FIXME: We should use finalizers here, however Gardener throws away
-	// all permissions of the controller at the same time as it deletes the
-	// duros resource. therefore, the cleanup cannot succeed and the cluster
-	// deletion hangs at 98% because the cr still has a finalizer attached.
-	if !duros.ObjectMeta.DeletionTimestamp.IsZero() {
-		// object is being deleted
-		// we don't pass the cancelled context here because then our deletion
-		// procedure will stop prematurely
-		deletionCtx := context.Background()
-
-		if err := r.cleanupResources(deletionCtx); err != nil {
-			return requeue, err
-		}
-
-		return ctrl.Result{}, nil
-	}
-
 	p, err := r.createProjectIfNotExist(ctx, projectID)
 	if err != nil {
 		return requeue, err
