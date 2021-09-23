@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -111,13 +112,15 @@ func main() {
 
 	restConfig := ctrl.GetConfigOrDie()
 
+	disabledTimeout := time.Duration(-1) // wait for all runnables to finish before dying
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "duros-controller-leader-election",
-		Namespace:          namespace,
+		Scheme:                  scheme,
+		MetricsBindAddress:      metricsAddr,
+		Port:                    9443,
+		LeaderElection:          enableLeaderElection,
+		LeaderElectionID:        "duros-controller-leader-election",
+		Namespace:               namespace,
+		GracefulShutdownTimeout: &disabledTimeout,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start duros-controller")
