@@ -13,7 +13,6 @@ import (
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	apps "k8s.io/api/apps/v1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
@@ -1016,68 +1015,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 type deletionResource struct {
 	Key    types.NamespacedName
 	Object client.Object
-}
-
-func (r *DurosReconciler) cleanupResources(ctx context.Context) error {
-	log := r.Log.WithName("storage-csi")
-	log.Info("cleanup csi")
-
-	resources := []deletionResource{
-		{
-			Key:    types.NamespacedName{Name: lbCSINodeName, Namespace: namespace},
-			Object: &appsv1.DaemonSet{},
-		},
-		{
-			Key:    types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace},
-			Object: &appsv1.StatefulSet{},
-		},
-		{
-			Key:    types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace},
-			Object: &corev1.Secret{},
-		},
-	}
-
-	for i := range clusterRoleBindings {
-		crb := clusterRoleBindings[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: crb.Name, Namespace: crb.Namespace},
-			Object: &rbac.ClusterRoleBinding{},
-		})
-	}
-
-	for i := range clusterRoles {
-		cr := clusterRoles[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: cr.Name, Namespace: cr.Namespace},
-			Object: &rbac.ClusterRole{},
-		})
-	}
-
-	for i := range serviceAccounts {
-		sa := serviceAccounts[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: sa.Name, Namespace: sa.Namespace},
-			Object: &corev1.ServiceAccount{},
-		})
-	}
-
-	for i := range psps {
-		psp := psps[i]
-		resources = append(resources, deletionResource{
-			Key:    types.NamespacedName{Name: psp.Name},
-			Object: &policy.PodSecurityPolicy{},
-		})
-	}
-
-	// we don't clean up the storage classes and CSI driver because there can be volumes that still reference it
-
-	for _, resource := range resources {
-		if err := r.deleteResourceWithWait(ctx, log, resource); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.Logger, resource deletionResource) error {

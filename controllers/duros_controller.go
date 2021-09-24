@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/metal-stack/duros-go"
@@ -88,33 +87,6 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	projectID := duros.Spec.MetalProjectID
 	storageClasses := duros.Spec.StorageClasses
-
-	if duros.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !containsString(duros.GetFinalizers(), DurosFinalizerName) {
-			controllerutil.AddFinalizer(duros, DurosFinalizerName)
-			if err := r.Update(ctx, duros); err != nil {
-				return requeue, err
-			}
-		}
-	} else {
-		// object is being deleted
-		// we don't pass the cancelled context here because then our deletion
-		// procedure will stop prematurely
-		deletionCtx := context.Background()
-
-		if containsString(duros.GetFinalizers(), DurosFinalizerName) {
-			if err := r.cleanupResources(deletionCtx); err != nil {
-				return requeue, err
-			}
-
-			controllerutil.RemoveFinalizer(duros, DurosFinalizerName)
-			if err := r.Update(deletionCtx, duros); err != nil {
-				return requeue, err
-			}
-		}
-
-		return ctrl.Result{}, nil
-	}
 
 	p, err := r.createProjectIfNotExist(ctx, projectID)
 	if err != nil {
@@ -234,13 +206,4 @@ func validateDuros(duros *v1.Duros) error {
 		}
 	}
 	return nil
-}
-
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
 }
