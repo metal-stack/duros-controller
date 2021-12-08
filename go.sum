@@ -336,8 +336,8 @@ github.com/mattn/go-isatty v0.0.3/go.mod h1:M+lRXTBqGeGNdLjl/ufCoiOlB5xdOkqRJdNx
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 h1:I0XW9+e1XWDxdcEniV4rQAIOPUGDq67JSCiRCgGCZLI=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
-github.com/metal-stack/duros-go v0.2.4-0.20211207130403-01d88162c593 h1:6rP34Il4qbgvkZepkNtZSvpGJNcxf0r8WOhwlnUd+HI=
-github.com/metal-stack/duros-go v0.2.4-0.20211207130403-01d88162c593/go.mod h1:7vf4YJa4QpP770hf26mhzFrv+SwZbt4M2Aj3HMysgOQ=
+github.com/metal-stack/duros-go v0.3.0 h1:dJSy6t6K1gIJ6BysyUKQR/JbzglM3Mdfqvfrgo0t/+E=
+github.com/metal-stack/duros-go v0.3.0/go.mod h1:7vf4YJa4QpP770hf26mhzFrv+SwZbt4M2Aj3HMysgOQ=
 github.com/metal-stack/v v1.0.3 h1:Sh2oBlnxrCUD+mVpzfC8HiqL045YWkxs0gpTvkjppqs=
 github.com/metal-stack/v v1.0.3/go.mod h1:YTahEu7/ishwpYKnp/VaW/7nf8+PInogkfGwLcGPdXg=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=

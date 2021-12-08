@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/zapr v0.4.0
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/metal-stack/duros-go v0.2.4-0.20211207130403-01d88162c593
+	github.com/metal-stack/duros-go v0.3.0
 	github.com/metal-stack/v v1.0.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
