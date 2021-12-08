@@ -34,6 +34,7 @@ const (
 	namespace   = "kube-system"
 	provisioner = "csi.lightbitslabs.com"
 
+	// nolint: gosec
 	storageClassCredentialsRef = "lb-csi-creds"
 
 	lbCSIControllerName = "lb-csi-controller"
@@ -761,7 +762,7 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 
-	claims := &jwt.StandardClaims{}
+	claims := &jwt.RegisteredClaims{}
 	_, _, err = new(jwt.Parser).ParseUnverified(string(token), claims)
 	if err != nil {
 		log.Error(err, "storage class token not parsable, recreating storage-class-secret")
@@ -775,14 +776,13 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 
-	expiresAt := time.Unix(claims.ExpiresAt, 0)
-	renewalAt := expiresAt.Add(-tokenRenewalBefore)
+	renewalAt := claims.ExpiresAt.Add(-tokenRenewalBefore)
 	if time.Now().After(renewalAt) {
-		log.Info("storage class token is expiring soon, refreshing token", "expires-at", expiresAt.String())
+		log.Info("storage class token is expiring soon, refreshing token", "expires-at", claims.ExpiresAt.String())
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
 	}
 
-	log.Info("storage class token is not expiring soon, not doing anything", "expires-at", expiresAt.String(), "renewal-at", renewalAt.String())
+	log.Info("storage class token is not expiring soon, not doing anything", "expires-at", claims.ExpiresAt.String(), "renewal-at", renewalAt.String())
 
 	return nil
 }
