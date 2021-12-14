@@ -996,6 +996,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
+				// FIXME: without this we cannot resize filesystems until this is fixed in lb-csi v1.7.x
+				"csi.storage.k8s.io/fstype":                              "ext4",
 			}
 
 			if sc.Compression {
