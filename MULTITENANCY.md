@@ -6,6 +6,8 @@ Lightbits storage uses NVMEoTCP (NVME over TCP) as transport protocol as defined
 
 ![Diagram](nvme-over-tcp.jpg)
 
+The current implementation prevents malicious access to data, prevention of performance impacts are subject of later lightos releases.
+
 ## Gardener and metal-stack
 
 Multi tenancy in metal-stack and gardener are based on tenants which itself can have multiple projects. A single kubernetes cluster is created in the scope of tenant and project, one project can have multiple kubernetes clusters. Every kubernetes cluster will get physically separated firewall and worker nodes in a dedicated routing domain called VRF. Every kubernetes cluster is totally separated from a physical an network perspective, nothing is shared.
