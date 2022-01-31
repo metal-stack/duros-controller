@@ -81,10 +81,10 @@ Once a volume is created and mount, e.g. a PVC and PV, the csi driver will first
 ```bash
 k get pvc,pv,node
 NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS       AGE
-persistentvolumeclaim/data-headscale-0   Bound    pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   1Gi        RWO            partition-silver   25s
+persistentvolumeclaim/data-sampla-app-0  Bound    pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   1Gi        RWO            partition-silver   25s
 
 NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS       REASON   AGE
-persistentvolume/pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   1Gi        RWO            Delete           Bound    headscale/data-headscale-0   partition-silver            25s
+persistentvolume/pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   1Gi        RWO            Delete           Bound    sampla-app/data-sampla-app-0 partition-silver            25s
 
 NAME                                               STATUS   ROLES   AGE     VERSION
 node/shoot--pd76mr--inttest0-group-0-845b8-49r7x   Ready    node    6d21h   v1.21.9
@@ -96,7 +96,7 @@ The pod wich mounts this volume is running on the node `shoot--pd76mr--inttest0-
 ```bash
 k get pod -o wide
 NAME          READY   STATUS    RESTARTS   AGE     IP              NODE                                          NOMINATED NODE   READINESS GATES
-headscale-0   1/1     Running   0          5m34s   10.244.15.152   shoot--pd76mr--inttest0-group-0-845b8-49r7x   <none>           <none>
+sampla-app-0  1/1     Running   0          5m34s   10.244.15.152   shoot--pd76mr--inttest0-group-0-845b8-49r7x   <none>           <none>
 ```
 
 on the Lightos cluster has set the ACL of this volume to be mounted only from the node where the pod is running and trying to mount this volume.
