@@ -12,7 +12,7 @@ The current implementation prevents malicious access to data, prevention of perf
 
 Multi tenancy in metal-stack and gardener are based on tenants which itself can have multiple projects. A single kubernetes cluster is created in the scope of tenant and project, one project can have multiple kubernetes clusters. Every kubernetes cluster will get physically separated firewall and worker nodes in a dedicated routing domain called VRF. Every kubernetes cluster is totally separated from a physical an network perspective, nothing is shared.
 
-Lightbits storage has also the notion of a tenant, once a cluster is created, a new tenant is created in the lightos storage API, the tenant there matches the project from the gardener/metal-stack perspective. For every cluster a authentication token in the JWT format is created, this token is able to create/update/list/delete volumes in the lightos cluster in the given project, resp. lightos tenant. For every kubernetes cluster, even in the same project, an individual JWT token is created. The token is also set to have a 8 day validity, 1 day before the token will get invalid and the cluster still exists, a new token is issued.
+Lightbits storage has also the notion of a project, once a cluster is created, a new project is created in the lightos storage API, the project there matches the project from the gardener/metal-stack perspective. For every cluster a authentication token in the JWT format is created, this token is able to create/update/list/delete volumes in the lightos cluster in the given project, resp. lightos project. For every kubernetes cluster, even in the same project, an individual JWT token is created. The token is also set to have a 8 day validity, 1 day before the token will get invalid and the cluster still exists, a new token is issued.
 
 The duros-controller is responsible to create such tokens, it is deployed in the shoot namespace in the seed and invisible for the cluster user. Once the token has been created, the token is stored in a secret in the shoot alongside with the deployment of the lightbits CSI driver and storage classes. This CSI driver will then be responsible to create/update/delete volumes based on the manifests deployed in the cluster.
 
@@ -111,3 +111,13 @@ pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   7828aa17-2316-442d-883e-d000436d41f2 
 
 The NVMEoTCP implementation in the linux kernel on the worker node side and on the lightos side implement the name of the volume to match these ACL expectations.
 
+This can be inspected on the worker node side by looking at the host nqn, e.g. the name of the nvme drive (NVMe qualified name). This nqn matches the ACL on the lightos server side.
+
+```bash
+cat /sys/devices/virtual/nvme-fabrics/ctl/nvme1/hostnqn
+nqn.2019-09.com.lightbitslabs:host:shoot--pd76mr--inttest0-group-0-845b8-49r7x.node
+```
+
+## Further improvements
+
+In the upcoming lightos release the performance aspects of multitenancy are addressed. This is achieved that it will be possible to cap the maximum throughput possible per volume. This will ensure that no single tenant is able to saturate the whole lightos cluster and impact other tenants using this lightos cluster.
