@@ -10,7 +10,7 @@ The current implementation prevents malicious access to data, prevention of perf
 
 ## Gardener and metal-stack
 
-Multi tenancy in metal-stack and gardener are based on tenants which itself can have multiple projects. A single kubernetes cluster is created in the scope of tenant and project, one project can have multiple kubernetes clusters. Every kubernetes cluster will get physically separated firewall and worker nodes in a dedicated routing domain called VRF. Every kubernetes cluster is totally separated from a physical an network perspective, nothing is shared.
+Multi tenancy in metal-stack and gardener are based on projects. In metal-stack, projects additionally belong to a tenant entity that groups projects. A single kubernetes cluster is created in the scope of project, one project can have multiple kubernetes clusters. Every kubernetes cluster will get physically separated firewall and worker nodes in a dedicated routing domain called VRF. Every kubernetes cluster is totally separated from a physical an network perspective, nothing is shared.
 
 Lightbits storage has also the notion of a project, once a cluster is created, a new project is created in the lightos storage API, the project there matches the project from the gardener/metal-stack perspective. For every cluster an authentication token in the JWT format is created, this token is able to create/update/list/delete volumes in the lightos cluster in the given project, resp. lightos project. For every kubernetes cluster, even in the same project, an individual JWT token is created. The token is also set to have a 8 day validity, 1 day before the token will get invalid and the cluster still exists, a new token is issued.
 
