@@ -93,7 +93,7 @@ node/shoot--pd76mr--inttest0-group-0-845b8-49r7x   Ready    node    6d21h   v1.2
 node/shoot--pd76mr--inttest0-group-0-845b8-ng7xh   Ready    node    7d1h    v1.21.9
 ```
 
-The pod wich mounts this volume is running on the node `shoot--pd76mr--inttest0-group-0-845b8-49r7x`.
+The pod which mounts this volume is running on the node `shoot--pd76mr--inttest0-group-0-845b8-49r7x`.
 
 ```bash
 k get pod -o wide
