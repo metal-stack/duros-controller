@@ -120,4 +120,4 @@ nqn.2019-09.com.lightbitslabs:host:shoot--pd76mr--inttest0-group-0-845b8-49r7x.n
 
 ## Further improvements
 
-In the upcoming lightos release the performance aspects of multitenancy are addressed. This is achieved that it will be possible to cap the maximum throughput possible per volume. This will ensure that no single tenant is able to saturate the whole lightos cluster and impact other tenants using this lightos cluster.
+In the upcoming lightos release the performance aspects of multi tenancy are addressed. This is achieved that it will be possible to cap the maximum throughput possible per volume. This will ensure that no single tenant is able to saturate the whole lightos cluster and impact other tenants using this lightos cluster.
