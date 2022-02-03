@@ -87,6 +87,10 @@ A Duros project will be deleted if the metal-api project is deleted. A check if 
 Accounting of volumes is done with the kube-counter running in every shoot in the seed. Accounting of volumes currently not in use in any of the clusters
 are listed from the cloud-api and reported to the accounting-api.
 
+## Tenant separation
+
+How tenant separation works is described more detailed [here](MULTITENANCY.md)
+
 ## TODO
 
 - check if Gardener deletes PVC's after cluster deletion.
