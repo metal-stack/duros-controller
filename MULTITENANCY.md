@@ -101,7 +101,7 @@ NAME          READY   STATUS    RESTARTS   AGE     IP              NODE         
 sampla-app-0  1/1     Running   0          5m34s   10.244.15.152   shoot--pd76mr--inttest0-group-0-845b8-49r7x   <none>           <none>
 ```
 
-on the Lightos cluster has set the ACL of this volume to be mounted only from the node where the pod is running and trying to mount this volume.
+Once the lightos cluster has set the ACL of this volume only a node which sets the hostnqn matching the given ACL is able to mount that volume.
 
 ```bash
 lbcli list volumes 
@@ -109,7 +109,7 @@ Name                                       UUID                                 
 pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   7828aa17-2316-442d-883e-d000436d41f2   Available   FullyProtected     631       1.0 GiB   2          true          values:"nqn.2019-09.com.lightbitslabs:host:shoot--pd76mr--inttest0-group-0-845b8-49r7x.node"      None
 ```
 
-The NVMEoTCP implementation in the linux kernel on the worker node side and on the lightos side implement the name of the volume to match these ACL expectations.
+The NVMEoTCP module in the linux kernel on the worker node side and on the lightos side implements setting the host nqn to match these ACL expectations.
 
 This can be inspected on the worker node side by looking at the host nqn, e.g. the name of the nvme drive (NVMe qualified name). This nqn matches the ACL on the lightos server side.
 
