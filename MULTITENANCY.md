@@ -78,7 +78,7 @@ metadata:
 
 ## Lightbits and NVMEoTCP
 
-Once a volume is created and mount, e.g. a PVC and PV, the csi driver will first create the volume on the lightos API with his token and set the hosts which are allowed to talk to this volume to the name of the worker nodes.
+Once a volume is created and mounted, e.g. a PVC and PV, the csi driver will first create the volume on the lightos API with his token and set the hosts which are allowed to talk to this volume to the name of the worker nodes.
 
 ```bash
 k get pvc,pv,node
