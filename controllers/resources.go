@@ -977,16 +977,15 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	for i := range scs {
 		sc := scs[i]
-		obj := &storage.StorageClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: sc.Name,
-				Annotations: map[string]string{
-					"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
-					metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
-				},
-			},
+
+		annotations := map[string]string{
+			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
+			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
 		}
+
+		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj.ObjectMeta.Annotations = annotations
 			obj.Provisioner = provisioner
 			obj.AllowVolumeExpansion = pointer.Bool(true)
 			obj.Parameters = map[string]string{
