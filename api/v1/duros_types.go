@@ -87,6 +87,7 @@ type StorageClass struct {
 	Name         string `json:"name"`
 	ReplicaCount int    `json:"replicas"`
 	Compression  bool   `json:"compression"`
+	Default      bool   `json:"default" description:"if set to true this storageclass is configured as default"`
 }
 
 func init() {

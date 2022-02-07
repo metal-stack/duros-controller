@@ -3,7 +3,7 @@ export CGO_ENABLED := 0
 # Image URL to use all building/pushing image targets
 IMG ?= duros-controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd"
 
 SHA := $(shell git rev-parse --short=8 HEAD)
 GITVERSION := $(shell git describe --long --all)
