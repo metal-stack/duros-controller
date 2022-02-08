@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -801,21 +800,18 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, log logr
 
 	storageClassSecret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: storageClassCredentialsRef, Namespace: namespace},
+		Type:       "kubernetes.io/lb-csi",
+		Data: map[string][]byte{
+			"jwt": []byte(token),
+		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassSecret, func() error {
-		storageClassSecret.Type = "kubernetes.io/lb-csi"
-		storageClassSecret.Data = map[string][]byte{
-			"jwt": []byte(token),
-		}
-
-		return nil
-	})
+	err = r.createOrUpdate(ctx, &storageClassSecret)
 	if err != nil {
 		return err
 	}
 
-	log.Info("storageclasssecret", "name", storageClassCredentialsRef, "operation", op)
+	log.Info("storageclasssecret", "name", storageClassCredentialsRef)
 
 	return nil
 }
@@ -837,32 +833,32 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	snapshotsSupported := false
 	switch gkv.Version {
 	case "v1":
-		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
-			csiDriver.Spec = storage.CSIDriverSpec{
+		csiDriver := &storage.CSIDriver{
+			ObjectMeta: metav1.ObjectMeta{Name: provisioner},
+			Spec: storage.CSIDriverSpec{
 				AttachRequired: pointer.Bool(true),
 				PodInfoOnMount: pointer.Bool(true),
-			}
-			return nil
-		})
+			},
+		}
+		err := r.createOrUpdate(ctx, csiDriver)
 		if err != nil {
 			return err
 		}
-		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
+		log.Info("csidriver", "name", csiDriver.Name)
 		snapshotsSupported = true
 	case "v1beta1":
-		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
-			csiDriver.Spec = storagev1beta1.CSIDriverSpec{
+		csiDriver := &storagev1beta1.CSIDriver{
+			ObjectMeta: metav1.ObjectMeta{Name: provisioner},
+			Spec: storagev1beta1.CSIDriverSpec{
 				AttachRequired: pointer.Bool(true),
 				PodInfoOnMount: pointer.Bool(true),
-			}
-			return nil
-		})
+			},
+		}
+		err := r.createOrUpdate(ctx, csiDriver)
 		if err != nil {
 			return err
 		}
-		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
+		log.Info("csidriver", "name", csiDriver.Name)
 	default:
 		err := fmt.Errorf("unsupported csi driver version:%s", gkv.Version)
 		log.Error(err, "no csi plugin deployment possible")
@@ -870,55 +866,66 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 
 	for i := range psps {
-		psp := psps[i]
-		obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Spec = psp.Spec
-			return nil
-		})
+		psp := psps[i].DeepCopy()
+		obj := &policy.PodSecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: psp.Name},
+			Spec:       psp.Spec,
+		}
+		err := r.createOrUpdate(ctx, obj)
 		if err != nil {
 			return err
 		}
-		log.Info("psp", "name", psp.Name, "operation", op)
+		log.Info("psp", "name", psp.Name)
 	}
 
 	for i := range serviceAccounts {
-		sa := serviceAccounts[i]
-		obj := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			return nil
-		})
+		sa := serviceAccounts[i].DeepCopy()
+		obj := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace},
+		}
+		err := r.createOrUpdate(ctx, obj)
 		if err != nil {
 			return err
 		}
-		log.Info("serviceaccount", "name", sa.Name, "operation", op)
+		log.Info("serviceaccount", "name", sa.Name)
 	}
 
 	for i := range clusterRoles {
-		cr := clusterRoles[i]
-		obj := &rbac.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: cr.Name, Namespace: cr.Namespace}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Rules = cr.Rules
-			return nil
-		})
+		cr := clusterRoles[i].DeepCopy()
+		obj := &rbac.ClusterRole{ObjectMeta: metav1.ObjectMeta{
+			Name: cr.Name, Namespace: cr.Namespace},
+			Rules: cr.Rules,
+		}
+		err := r.createOrUpdate(ctx, obj)
 		if err != nil {
 			return err
 		}
-		log.Info("clusterrole", "name", cr.Name, "operation", op)
+		log.Info("clusterrole", "name", cr.Name)
 	}
 
 	for i := range clusterRoleBindings {
-		crb := clusterRoleBindings[i]
-		obj := &rbac.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crb.Name, Namespace: crb.Namespace}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Subjects = crb.Subjects
-			obj.RoleRef = crb.RoleRef
-			return nil
-		})
+		crb := clusterRoleBindings[i].DeepCopy()
+		obj := &rbac.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: crb.Name, Namespace: crb.Namespace},
+			Subjects:   crb.Subjects,
+			RoleRef:    crb.RoleRef,
+		}
+		err := r.createOrUpdate(ctx, obj)
 		if err != nil {
 			return err
 		}
-		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
+		log.Info("clusterrolebindinding", "name", crb.Name)
+	}
+
+	controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
+	containers := []corev1.Container{
+		*csiPluginContainer.DeepCopy(),
+		*csiProvisionerContainer.DeepCopy(),
+		*csiAttacherContainer.DeepCopy(),
+		*csiResizerContainer.DeepCopy(),
+	}
+	if snapshotsSupported {
+		containers = append(containers, snapshotControllerContainer, csiSnapshotterContainer)
 	}
 
 	sts := &apps.StatefulSet{
@@ -927,21 +934,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			Namespace: namespace,
 			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 		},
-	}
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-
-		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
-		containers := []corev1.Container{
-			csiPluginContainer,
-			csiProvisionerContainer,
-			csiAttacherContainer,
-			csiResizerContainer,
-		}
-		if snapshotsSupported {
-			containers = append(containers, snapshotControllerContainer, csiSnapshotterContainer)
-		}
-
-		sts.Spec = apps.StatefulSetSpec{
+		Spec: apps.StatefulSetSpec{
 			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
 			ServiceName: "lb-csi-ctrl-svc",
 			Replicas:    pointer.Int32(1),
@@ -952,43 +945,40 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					ServiceAccountName: ctrlServiceAccount.Name,
 					PriorityClassName:  "system-cluster-critical",
 					Volumes: []corev1.Volume{
-						socketDirVolume,
+						*socketDirVolume.DeepCopy(),
 					},
 				},
 			},
-		}
-		return nil
-	})
+		},
+	}
 
+	err = r.createOrUpdate(ctx, sts)
 	if err != nil {
 		return err
 	}
-	log.Info("statefulset", "name", sts.Name, "operation", op)
+	log.Info("statefulset", "name", sts.Name)
 
-	ds := &apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace}}
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, ds, func() error {
-		ds.Spec = csiNodeDaemonSet.Spec
-		return nil
-	})
+	ds := csiNodeDaemonSet.DeepCopy()
+	err = r.createOrUpdate(ctx, ds)
 	if err != nil {
 		return err
 	}
-	log.Info("daemonset", "name", csiNodeDaemonSet.Name, "operation", op)
+	log.Info("daemonset", "name", csiNodeDaemonSet.Name)
 
 	for i := range scs {
-		sc := scs[i]
+		sc := scs[i].DeepCopy()
 
-		annotations := map[string]string{
-			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
-			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
-		}
-
-		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
-		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.ObjectMeta.Annotations = annotations
-			obj.Provisioner = provisioner
-			obj.AllowVolumeExpansion = pointer.Bool(true)
-			obj.Parameters = map[string]string{
+		obj := &storage.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: sc.Name,
+				Annotations: map[string]string{
+					"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
+					metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
+				},
+			},
+			Provisioner:          provisioner,
+			AllowVolumeExpansion: pointer.Bool(true),
+			Parameters: map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",
 				"mgmt-endpoint": r.Endpoints.String(),
@@ -1004,17 +994,18 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
-			}
+			},
+		}
 
-			if sc.Compression {
-				obj.Parameters["compression"] = "enabled"
-			}
-			return nil
-		})
+		if sc.Compression {
+			obj.Parameters["compression"] = "enabled"
+		}
+
+		err = r.createOrUpdate(ctx, obj)
 		if err != nil {
 			return err
 		}
-		log.Info("storageclass", "name", sc.Name, "operation", op)
+		log.Info("storageclass", "name", sc.Name)
 	}
 
 	return nil
@@ -1045,4 +1036,16 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 
 		return false, err
 	})
+}
+
+func (r *DurosReconciler) createOrUpdate(ctx context.Context, obj client.Object) error {
+	err := r.Shoot.Create(ctx, obj)
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return r.Shoot.Update(ctx, obj)
+		}
+		return err
+	}
+
+	return nil
 }
