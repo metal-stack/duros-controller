@@ -1042,6 +1042,13 @@ func (r *DurosReconciler) createOrUpdate(ctx context.Context, obj client.Object)
 	err := r.Shoot.Create(ctx, obj)
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
+			part := &metav1.PartialObjectMetadata{}
+			part.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
+			err = r.Shoot.Get(ctx, client.ObjectKeyFromObject(obj), part)
+			if err != nil {
+				return err
+			}
+			obj.SetResourceVersion(part.ResourceVersion)
 			return r.Shoot.Update(ctx, obj)
 		}
 		return err
