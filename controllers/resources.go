@@ -1040,19 +1040,37 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 
 func (r *DurosReconciler) createOrUpdate(ctx context.Context, obj client.Object) error {
 	err := r.Shoot.Create(ctx, obj)
-	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			part := &metav1.PartialObjectMetadata{}
-			part.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-			err = r.Shoot.Get(ctx, client.ObjectKeyFromObject(obj), part)
-			if err != nil {
-				return err
-			}
-			obj.SetResourceVersion(part.ResourceVersion)
-			return r.Shoot.Update(ctx, obj)
-		}
+	if err == nil {
+		r.Log.Info("created resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		return nil
+	}
+	if !apierrors.IsAlreadyExists(err) {
+		r.Log.Error(err, "error creating resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
 		return err
 	}
 
-	return nil
+	part := &metav1.PartialObjectMetadata{}
+	kinds, _, err := r.Scheme().ObjectKinds(obj)
+	if err != nil {
+		r.Log.Error(err, "error finding object kinds")
+		return err
+	}
+
+	part.SetGroupVersionKind(kinds[0])
+	err = r.Shoot.Get(ctx, client.ObjectKeyFromObject(obj), part)
+	if err != nil {
+		r.Log.Error(err, "error retrieving resource version", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		return err
+	}
+
+	obj.SetResourceVersion(part.ResourceVersion)
+
+	err = r.Shoot.Update(ctx, obj)
+	if err == nil {
+		r.Log.Info("updated resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		return nil
+	}
+
+	r.Log.Error(err, "error updating resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+	return err
 }
