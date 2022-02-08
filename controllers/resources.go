@@ -844,7 +844,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("csidriver", "name", csiDriver.Name)
 		snapshotsSupported = true
 	case "v1beta1":
 		csiDriver := &storagev1beta1.CSIDriver{
@@ -858,7 +857,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("csidriver", "name", csiDriver.Name)
 	default:
 		err := fmt.Errorf("unsupported csi driver version:%s", gkv.Version)
 		log.Error(err, "no csi plugin deployment possible")
@@ -875,7 +873,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("psp", "name", psp.Name)
 	}
 
 	for i := range serviceAccounts {
@@ -887,7 +884,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("serviceaccount", "name", sa.Name)
 	}
 
 	for i := range clusterRoles {
@@ -900,7 +896,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("clusterrole", "name", cr.Name)
 	}
 
 	for i := range clusterRoleBindings {
@@ -914,7 +909,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("clusterrolebindinding", "name", crb.Name)
 	}
 
 	controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
@@ -956,14 +950,12 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	if err != nil {
 		return err
 	}
-	log.Info("statefulset", "name", sts.Name)
 
 	ds := csiNodeDaemonSet.DeepCopy()
 	err = r.createOrUpdate(ctx, ds)
 	if err != nil {
 		return err
 	}
-	log.Info("daemonset", "name", csiNodeDaemonSet.Name)
 
 	for i := range scs {
 		sc := scs[i].DeepCopy()
@@ -1005,7 +997,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("storageclass", "name", sc.Name)
 	}
 
 	return nil
@@ -1039,27 +1030,31 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 }
 
 func (r *DurosReconciler) createOrUpdate(ctx context.Context, obj client.Object) error {
-	err := r.Shoot.Create(ctx, obj)
+	gvks, _, err := r.Scheme().ObjectKinds(obj)
+	if err != nil {
+		r.Log.Error(err, "error determining object kinds", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		return err
+	}
+
+	gvk := gvks[0]
+	keysAndValues := []interface{}{"name", obj.GetName(), "namespace", obj.GetNamespace(), "group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind}
+
+	err = r.Shoot.Create(ctx, obj)
 	if err == nil {
-		r.Log.Info("created resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		r.Log.Info("created resource", keysAndValues...)
 		return nil
 	}
 	if !apierrors.IsAlreadyExists(err) {
-		r.Log.Error(err, "error creating resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		r.Log.Error(err, "error creating resource", keysAndValues...)
 		return err
 	}
 
 	part := &metav1.PartialObjectMetadata{}
-	kinds, _, err := r.Scheme().ObjectKinds(obj)
-	if err != nil {
-		r.Log.Error(err, "error finding object kinds")
-		return err
-	}
+	part.SetGroupVersionKind(gvks[0])
 
-	part.SetGroupVersionKind(kinds[0])
 	err = r.Shoot.Get(ctx, client.ObjectKeyFromObject(obj), part)
 	if err != nil {
-		r.Log.Error(err, "error retrieving resource version", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		r.Log.Error(err, "error retrieving partial object metadata", keysAndValues)
 		return err
 	}
 
@@ -1067,10 +1062,10 @@ func (r *DurosReconciler) createOrUpdate(ctx context.Context, obj client.Object)
 
 	err = r.Shoot.Update(ctx, obj)
 	if err == nil {
-		r.Log.Info("updated resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+		r.Log.Info("updated resource", keysAndValues...)
 		return nil
 	}
 
-	r.Log.Error(err, "error updating resource", "name", obj.GetName(), "namespace", obj.GetNamespace())
+	r.Log.Error(err, "error updating resource", keysAndValues...)
 	return err
 }
