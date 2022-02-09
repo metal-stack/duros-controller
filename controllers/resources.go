@@ -837,12 +837,18 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	snapshotsSupported := false
 	switch gkv.Version {
 	case "v1":
-		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
-			csiDriver.Spec = storage.CSIDriverSpec{
+		csiDriver := &storage.CSIDriver{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: provisioner,
+			},
+			Spec: storage.CSIDriverSpec{
 				AttachRequired: pointer.Bool(true),
 				PodInfoOnMount: pointer.Bool(true),
-			}
+			},
+		}
+		csiDriverCopy := csiDriver.DeepCopy()
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
+			csiDriver = csiDriverCopy
 			return nil
 		})
 		if err != nil {
@@ -851,12 +857,18 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
 		snapshotsSupported = true
 	case "v1beta1":
-		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
-			csiDriver.Spec = storagev1beta1.CSIDriverSpec{
+		csiDriver := &storagev1beta1.CSIDriver{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: provisioner,
+			},
+			Spec: storagev1beta1.CSIDriverSpec{
 				AttachRequired: pointer.Bool(true),
 				PodInfoOnMount: pointer.Bool(true),
-			}
+			},
+		}
+		csiDriverCopy := csiDriver.DeepCopy()
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
+			csiDriver = csiDriverCopy
 			return nil
 		})
 		if err != nil {
@@ -870,78 +882,74 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 
 	for i := range psps {
-		psp := psps[i]
-		obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
+		obj := psps[i].DeepCopy()
+		objCopy := obj.DeepCopy()
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Spec = psp.Spec
+			obj = objCopy
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		log.Info("psp", "name", psp.Name, "operation", op)
+		log.Info("psp", "name", obj.Name, "operation", op)
 	}
 
 	for i := range serviceAccounts {
-		sa := serviceAccounts[i]
-		obj := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace}}
+		obj := serviceAccounts[i].DeepCopy()
+		objCopy := obj.DeepCopy()
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj = objCopy
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		log.Info("serviceaccount", "name", sa.Name, "operation", op)
+		log.Info("serviceaccount", "name", obj.Name, "operation", op)
 	}
 
 	for i := range clusterRoles {
-		cr := clusterRoles[i]
-		obj := &rbac.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: cr.Name, Namespace: cr.Namespace}}
+		obj := clusterRoles[i].DeepCopy()
+		objCopy := obj.DeepCopy()
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Rules = cr.Rules
+			obj = objCopy
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		log.Info("clusterrole", "name", cr.Name, "operation", op)
+		log.Info("clusterrole", "name", obj.Name, "operation", op)
 	}
 
 	for i := range clusterRoleBindings {
-		crb := clusterRoleBindings[i]
-		obj := &rbac.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crb.Name, Namespace: crb.Namespace}}
+		obj := clusterRoleBindings[i].DeepCopy()
+		objCopy := obj.DeepCopy()
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Subjects = crb.Subjects
-			obj.RoleRef = crb.RoleRef
+			obj = objCopy
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
+		log.Info("clusterrolebindinding", "name", obj.Name, "operation", op)
 	}
 
+	controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
+	containers := []corev1.Container{
+		*csiPluginContainer.DeepCopy(),
+		*csiProvisionerContainer.DeepCopy(),
+		*csiAttacherContainer.DeepCopy(),
+		*csiResizerContainer.DeepCopy(),
+	}
+	if snapshotsSupported {
+		containers = append(containers, *snapshotControllerContainer.DeepCopy(), *csiSnapshotterContainer.DeepCopy())
+	}
 	sts := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSIControllerName,
 			Namespace: namespace,
 			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 		},
-	}
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-
-		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
-		containers := []corev1.Container{
-			csiPluginContainer,
-			csiProvisionerContainer,
-			csiAttacherContainer,
-			csiResizerContainer,
-		}
-		if snapshotsSupported {
-			containers = append(containers, snapshotControllerContainer, csiSnapshotterContainer)
-		}
-
-		sts.Spec = apps.StatefulSetSpec{
+		Spec: apps.StatefulSetSpec{
 			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
 			ServiceName: "lb-csi-ctrl-svc",
 			Replicas:    pointer.Int32(1),
@@ -956,7 +964,12 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					},
 				},
 			},
-		}
+		},
+	}
+	stsCopy := sts.DeepCopy()
+
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
+		sts = stsCopy
 		return nil
 	})
 
@@ -965,15 +978,16 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 	log.Info("statefulset", "name", sts.Name, "operation", op)
 
-	ds := &apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace}}
+	ds := csiNodeDaemonSet.DeepCopy()
+	dsCopy := ds.DeepCopy()
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, ds, func() error {
-		ds.Spec = csiNodeDaemonSet.Spec
+		ds = dsCopy
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	log.Info("daemonset", "name", csiNodeDaemonSet.Name, "operation", op)
+	log.Info("daemonset", "name", ds.Name, "operation", op)
 
 	for i := range scs {
 		sc := scs[i]
@@ -983,12 +997,14 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
 		}
 
-		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
-		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.ObjectMeta.Annotations = annotations
-			obj.Provisioner = provisioner
-			obj.AllowVolumeExpansion = pointer.Bool(true)
-			obj.Parameters = map[string]string{
+		obj := &storage.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        sc.Name,
+				Annotations: annotations,
+			},
+			Provisioner:          provisioner,
+			AllowVolumeExpansion: pointer.Bool(true),
+			Parameters: map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",
 				"mgmt-endpoint": r.Endpoints.String(),
@@ -1004,17 +1020,21 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
-			}
+			},
+		}
+		if sc.Compression {
+			obj.Parameters["compression"] = "enabled"
+		}
+		objCopy := obj.DeepCopy()
 
-			if sc.Compression {
-				obj.Parameters["compression"] = "enabled"
-			}
+		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+			obj = objCopy
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		log.Info("storageclass", "name", sc.Name, "operation", op)
+		log.Info("storageclass", "name", obj.Name, "operation", op)
 	}
 
 	return nil
