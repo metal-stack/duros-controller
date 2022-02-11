@@ -486,6 +486,7 @@ var (
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
+			{Name: etcDirVolume.Name, MountPath: "/etc/lb-csi/"},
 		},
 		Resources: defaultResourceLimits,
 	}
@@ -606,6 +607,7 @@ var (
 			{Name: podsMountDirVolume.Name, MountPath: "/var/lib/kubelet", MountPropagation: &mountPropagationBidirectional},
 			{Name: deviceDirVolume.Name, MountPath: "/dev"},
 			{Name: discoveryClientDirVolume.Name, MountPath: "/etc/discovery-client/discovery.d"},
+			{Name: etcDirVolume.Name, MountPath: "/etc/lb-csi/"},
 		},
 		Resources: defaultResourceLimits,
 	}
@@ -690,6 +692,14 @@ var (
 			},
 		},
 	}
+	etcDirVolume = corev1.Volume{
+		Name: "etc-lb-csi",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: storageClassCredentialsRef,
+			},
+		},
+	}
 
 	// Node DaemonSet
 	nodeRoleLabels   = map[string]string{"app": lbCSINodeName, "role": "node"}
@@ -726,6 +736,7 @@ var (
 						deviceDirVolume,
 						modulesDirVolume,
 						discoveryClientDirVolume,
+						etcDirVolume,
 					},
 				},
 			},
@@ -953,6 +964,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					PriorityClassName:  "system-cluster-critical",
 					Volumes: []corev1.Volume{
 						socketDirVolume,
+						etcDirVolume,
 					},
 				},
 			},
@@ -994,20 +1006,23 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"mgmt-endpoint": r.Endpoints.String(),
 				"project-name":  projectID,
 				"replica-count": strconv.Itoa(sc.ReplicaCount),
-				"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
-				"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
-				"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
-				"csi.storage.k8s.io/node-publish-secret-namespace":       namespace,
-				"csi.storage.k8s.io/node-stage-secret-name":              storageClassCredentialsRef,
-				"csi.storage.k8s.io/node-stage-secret-namespace":         namespace,
-				"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
-				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
+				"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
+				"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
+				"csi.storage.k8s.io/node-publish-secret-name":            "storage-encryption-key",
+				"csi.storage.k8s.io/node-publish-secret-namespace":       "${pvc.namespace}",
+				"csi.storage.k8s.io/node-stage-secret-name":              "storage-encryption-key",
+				"csi.storage.k8s.io/node-stage-secret-namespace":         "${pvc.namespace}",
+				"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
+				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 			}
 
 			if sc.Compression {
 				obj.Parameters["compression"] = "enabled"
+			}
+			if sc.Encryption {
+				obj.Parameters["encryption"] = "enabled"
 			}
 			return nil
 		})
