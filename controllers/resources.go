@@ -1010,10 +1010,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
 				"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
-				"csi.storage.k8s.io/node-publish-secret-name":            "storage-encryption-key",
-				"csi.storage.k8s.io/node-publish-secret-namespace":       "${pvc.namespace}",
-				"csi.storage.k8s.io/node-stage-secret-name":              "storage-encryption-key",
-				"csi.storage.k8s.io/node-stage-secret-namespace":         "${pvc.namespace}",
+				"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
+				"csi.storage.k8s.io/node-publish-secret-namespace":       namespace,
+				"csi.storage.k8s.io/node-stage-secret-name":              storageClassCredentialsRef,
+				"csi.storage.k8s.io/node-stage-secret-namespace":         namespace,
 				"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
 				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
 			}
@@ -1023,6 +1023,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			}
 			if sc.Encryption {
 				obj.Parameters["encryption"] = "enabled"
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = "storage-encryption-key"
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = "${pvc.namespace}"
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = "storage-encryption-key"
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = "${pvc.namespace}"
 			}
 			return nil
 		})
