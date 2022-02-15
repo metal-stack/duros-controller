@@ -1022,15 +1022,16 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				obj.Parameters["compression"] = "enabled"
 			}
 			if sc.Encryption {
-				encryptionSecretName := "storage-encryption-key"
-				encryptionSecretNamespace := "${pvc.namespace}"
+				secretName := "storage-encryption-key"
+				//nolint:gosec
+				secretNamespace := "${pvc.namespace}"
 				obj.Parameters["encryption"] = "enabled"
-				obj.Parameters["csi.storage.k8s.io/controller-expand-secret-name"] = encryptionSecretName
-				obj.Parameters["csi.storage.k8s.io/controller-expand-secret-namespace"] = encryptionSecretNamespace
-				obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = encryptionSecretName
-				obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = encryptionSecretNamespace
-				obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = encryptionSecretName
-				obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = encryptionSecretNamespace
+				obj.Parameters["csi.storage.k8s.io/controller-expand-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/controller-expand-secret-namespace"] = secretNamespace
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = secretNamespace
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = secretNamespace
 			}
 			return nil
 		})
