@@ -217,7 +217,7 @@ var (
 			},
 			{
 				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"volumeattachments"},
+				Resources: []string{"volumeattachments", "volumeattachments/status"},
 				Verbs:     []string{"get", "list", "watch", "update", "patch"},
 			},
 			{
