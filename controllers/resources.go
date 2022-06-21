@@ -217,7 +217,7 @@ var (
 			},
 			{
 				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"volumeattachments"},
+				Resources: []string{"volumeattachments", "volumeattachments/status"},
 				Verbs:     []string{"get", "list", "watch", "update", "patch"},
 			},
 			{
@@ -486,6 +486,7 @@ var (
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
+			{Name: etcDirVolume.Name, MountPath: "/etc/lb-csi/"},
 		},
 		Resources: defaultResourceLimits,
 	}
@@ -606,6 +607,7 @@ var (
 			{Name: podsMountDirVolume.Name, MountPath: "/var/lib/kubelet", MountPropagation: &mountPropagationBidirectional},
 			{Name: deviceDirVolume.Name, MountPath: "/dev"},
 			{Name: discoveryClientDirVolume.Name, MountPath: "/etc/discovery-client/discovery.d"},
+			{Name: etcDirVolume.Name, MountPath: "/etc/lb-csi/"},
 		},
 		Resources: defaultResourceLimits,
 	}
@@ -624,7 +626,7 @@ var (
 			{Name: "DRIVER_REG_SOCK_PATH", Value: "/var/lib/kubelet/plugins/csi.lightbitslabs.com/csi.sock"},
 			{Name: "KUBE_NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 		},
-		Lifecycle: &corev1.Lifecycle{PreStop: &corev1.Handler{Exec: &corev1.ExecAction{
+		Lifecycle: &corev1.Lifecycle{PreStop: &corev1.LifecycleHandler{Exec: &corev1.ExecAction{
 			Command: []string{
 				"/bin/sh",
 				"-c",
@@ -690,6 +692,14 @@ var (
 			},
 		},
 	}
+	etcDirVolume = corev1.Volume{
+		Name: "etc-lb-csi",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: storageClassCredentialsRef,
+			},
+		},
+	}
 
 	// Node DaemonSet
 	nodeRoleLabels   = map[string]string{"app": lbCSINodeName, "role": "node"}
@@ -726,6 +736,7 @@ var (
 						deviceDirVolume,
 						modulesDirVolume,
 						discoveryClientDirVolume,
+						etcDirVolume,
 					},
 				},
 			},
@@ -953,6 +964,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					PriorityClassName:  "system-cluster-critical",
 					Volumes: []corev1.Volume{
 						socketDirVolume,
+						etcDirVolume,
 					},
 				},
 			},
@@ -994,6 +1006,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"mgmt-endpoint": r.Endpoints.String(),
 				"project-name":  projectID,
 				"replica-count": strconv.Itoa(sc.ReplicaCount),
+				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
+				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
 				"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
 				"csi.storage.k8s.io/node-publish-secret-name":            storageClassCredentialsRef,
@@ -1002,13 +1016,23 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"csi.storage.k8s.io/node-stage-secret-namespace":         namespace,
 				"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
 				"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
-				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
-				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
 			}
 
 			if sc.Compression {
 				obj.Parameters["compression"] = "enabled"
 			}
+			// if sc.Encryption {
+			// 	secretName := "storage-encryption-key"
+			// 	//nolint:gosec
+			// 	secretNamespace := "${pvc.namespace}"
+			// 	obj.Parameters["encryption"] = "enabled"
+			// 	obj.Parameters["csi.storage.k8s.io/controller-expand-secret-name"] = secretName
+			// 	obj.Parameters["csi.storage.k8s.io/controller-expand-secret-namespace"] = secretNamespace
+			// 	obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = secretName
+			// 	obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = secretNamespace
+			// 	obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = secretName
+			// 	obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = secretNamespace
+			// }
 			return nil
 		})
 		if err != nil {
