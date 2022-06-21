@@ -217,7 +217,7 @@ var (
 			},
 			{
 				APIGroups: []string{"storage.k8s.io"},
-				Resources: []string{"volumeattachments"},
+				Resources: []string{"volumeattachments", "volumeattachments/status"},
 				Verbs:     []string{"get", "list", "watch", "update", "patch"},
 			},
 			{
@@ -626,7 +626,7 @@ var (
 			{Name: "DRIVER_REG_SOCK_PATH", Value: "/var/lib/kubelet/plugins/csi.lightbitslabs.com/csi.sock"},
 			{Name: "KUBE_NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 		},
-		Lifecycle: &corev1.Lifecycle{PreStop: &corev1.Handler{Exec: &corev1.ExecAction{
+		Lifecycle: &corev1.Lifecycle{PreStop: &corev1.LifecycleHandler{Exec: &corev1.ExecAction{
 			Command: []string{
 				"/bin/sh",
 				"-c",
