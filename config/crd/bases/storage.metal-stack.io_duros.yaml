@@ -56,8 +56,6 @@ spec:
                       type: boolean
                     default:
                       type: boolean
-                    encryption:
-                      type: boolean
                     name:
                       type: string
                     replicas:

@@ -1,22 +1,22 @@
 module github.com/metal-stack/duros-controller
 
-go 1.17
+go 1.18
 
 require (
 	github.com/go-logr/logr v1.0.0
 	github.com/go-logr/zapr v0.4.0
-	github.com/golang-jwt/jwt/v4 v4.2.0
-	github.com/metal-stack/duros-go v0.3.0
+	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/metal-stack/duros-go v0.3.3
 	github.com/metal-stack/metal-lib v0.9.0
 	github.com/metal-stack/v v1.0.3
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.18.1
-	go.uber.org/zap v1.20.0
-	google.golang.org/grpc v1.44.0
+	github.com/onsi/gomega v1.19.0
+	go.uber.org/zap v1.21.0
+	google.golang.org/grpc v1.47.0
 	k8s.io/api v0.22.4
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v0.22.4
-	k8s.io/utils v0.0.0-20211203121628-587287796c64
+	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/controller-runtime v0.10.3
 )
 
@@ -48,18 +48,18 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
+	golang.org/x/net v0.0.0-20220421235706-1d1ef9303861 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
-	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
-	golang.org/x/text v0.3.6 // indirect
+	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20211206220100-3cb06788ce7f // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/genproto v0.0.0-20220422154200-b37d22cd5731 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
