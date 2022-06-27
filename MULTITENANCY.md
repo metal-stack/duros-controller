@@ -49,6 +49,7 @@ parameters:
   csi.storage.k8s.io/node-stage-secret-namespace: kube-system
   csi.storage.k8s.io/provisioner-secret-name: lb-csi-creds
   csi.storage.k8s.io/provisioner-secret-namespace: kube-system
+  csi.storage.k8s.io/fstype: ext4
   mgmt-endpoint: 10.131.44.1:443,10.131.44.2:443,10.131.44.3:443
   mgmt-scheme: grpcs
   project-name: 0f89286d-0429-4209-a8a9-8612befbff97
@@ -104,7 +105,7 @@ sampla-app-0  1/1     Running   0          5m34s   10.244.15.152   shoot--pd76mr
 Once the lightos cluster has set the ACL of this volume only a node which sets the hostnqn matching the given ACL is able to mount that volume.
 
 ```bash
-lbcli list volumes 
+lbcli list volumes
 Name                                       UUID                                   State       Protection State   NSID      Size      Replicas   Compression   ACL                                                                                               Rebuild Progress
 pvc-c4b7822b-b3c8-414a-a1fa-9350d30a4f5c   7828aa17-2316-442d-883e-d000436d41f2   Available   FullyProtected     631       1.0 GiB   2          true          values:"nqn.2019-09.com.lightbitslabs:host:shoot--pd76mr--inttest0-group-0-845b8-49r7x.node"      None
 ```

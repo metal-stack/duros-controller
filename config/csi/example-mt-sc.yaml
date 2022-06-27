@@ -10,6 +10,7 @@ parameters:
   compression: disabled
   project-name: a
   mgmt-scheme: grpcs
+  csi.storage.k8s.io/fstype: ext4
   csi.storage.k8s.io/controller-publish-secret-name: example-secret
   csi.storage.k8s.io/controller-publish-secret-namespace: default
   csi.storage.k8s.io/controller-expand-secret-name: example-secret

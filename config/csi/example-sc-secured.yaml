@@ -10,6 +10,7 @@ parameters:
   project-name: project-a
   replica-count: "3"
   compression: disabled
+  csi.storage.k8s.io/fstype: ext4
   # Change the NameSpace below if lb-csi-plugin doesn't run in kube-system
   csi.storage.k8s.io/controller-publish-secret-name: lb-csi-creds
   csi.storage.k8s.io/controller-publish-secret-namespace: kube-system
