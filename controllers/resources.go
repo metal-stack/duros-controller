@@ -1037,6 +1037,14 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			return nil
 		})
 		if err != nil {
+			// if error is of type Invalid, delete old storage class. Will be recreated immediately on next reconciliation
+			if apierrors.IsInvalid(err) {
+				err := r.Shoot.Delete(ctx, obj)
+				if err != nil {
+					return err
+				}
+				log.Info("storageclass", "name", sc.Name, "operation", "deleted")
+			}
 			return err
 		}
 		log.Info("storageclass", "name", sc.Name, "operation", op)
