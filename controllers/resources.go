@@ -569,7 +569,7 @@ var (
 
 	nodeInitContainer = corev1.Container{
 		Name:            "init-nvme-tcp",
-		Image:           busyboxImage,
+		Image:           lbCSIPluginImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{Privileged: pointer.Bool(true)},
 		VolumeMounts: []corev1.VolumeMount{
