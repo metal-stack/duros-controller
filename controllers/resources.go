@@ -494,7 +494,7 @@ var (
 		Name:            "csi-provisioner",
 		Image:           csiProvisionerImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4"},
+		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4", "--default-fstype=ext4"},
 		Env: []corev1.EnvVar{
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
@@ -1006,7 +1006,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				"mgmt-endpoint": r.Endpoints.String(),
 				"project-name":  projectID,
 				"replica-count": strconv.Itoa(sc.ReplicaCount),
-				"csi.storage.k8s.io/fstype": "ext4",
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
 				"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
 				"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
