@@ -4,3 +4,4 @@ api/duros/*
 api/durosv2/*
 bin/
 **/*/statik.go
+.vscode
