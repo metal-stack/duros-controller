@@ -1,7 +1,7 @@
 package controllers
 
 const (
-	lbCSIPluginImage            = "docker.lightbitslabs.com/lightos-csi-dev/lb-csi-plugin:pr16-120-5932e3a"
+	lbCSIPluginImage            = "docker.lightbitslabs.com/lightos-csi-dev/lb-csi-plugin:pr16-121-bc9b26d"
 	lbDiscoveryClientImage      = "docker.lightbitslabs.com/lightos-csi/lb-nvme-discovery-client:1.8.0"
 	csiProvisionerImage         = "k8s.gcr.io/sig-storage/csi-provisioner:v2.2.2"
 	csiAttacherImage            = "k8s.gcr.io/sig-storage/csi-attacher:v3.5.0"
