@@ -1074,7 +1074,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 		if r.shootK8sVersionGreater120() {
 			annotations := map[string]string{
-				metaltag.ClusterDescription: "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
+				"snapshot.storage.kubernetes.io/is-default-class": "true",
+				metaltag.ClusterDescription:                       "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
 			}
 			obj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
 			op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
