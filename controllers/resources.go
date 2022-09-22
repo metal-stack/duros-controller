@@ -180,6 +180,11 @@ var (
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
+				APIGroups: []string{"snapshot.storage.k8s.io"},
+				Resources: []string{"volumesnapshots"},
+				Verbs:     []string{"get", "list", "watch", "update", "patch", "delete"},
+			},
+			{
 				APIGroups: []string{""},
 				Resources: []string{"events"},
 				Verbs:     []string{"list", "watch", "create", "update", "patch"},
@@ -1061,7 +1066,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			annotations := map[string]string{
 				metaltag.ClusterDescription: "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
 			}
-			obj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "snapshot"}}
+			obj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
 			op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 				obj.ObjectMeta.Annotations = annotations
 				obj.Driver = provisioner
