@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/metal-stack/duros-go"
@@ -29,6 +30,8 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 )
 
 const (
@@ -861,6 +864,13 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		}
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
 		snapshotsSupported = true
+		if r.shootK8sVersionGreater120() {
+			snapshotControllerContainer.Image = snapshotControllerImage
+			csiSnapshotterContainer.Image = csiSnapshotterImage
+		} else {
+			snapshotControllerContainer.Image = snapshotControllerImageBeta1
+			csiSnapshotterContainer.Image = csiSnapshotterImageBeta1
+		}
 	case "v1beta1":
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
@@ -1046,10 +1056,53 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			}
 			return err
 		}
+
+		if r.shootK8sVersionGreater120() {
+			annotations := map[string]string{
+				metaltag.ClusterDescription: "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
+			}
+			obj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "snapshot"}}
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+				obj.ObjectMeta.Annotations = annotations
+				obj.Driver = provisioner
+				obj.DeletionPolicy = snapshotv1.VolumeSnapshotContentDelete
+				obj.Parameters = map[string]string{
+					"csi.storage.k8s.io/snapshotter-secret-name":               storageClassCredentialsRef,
+					"csi.storage.k8s.io/snapshotter-secret-namespace":          namespace,
+					"csi.storage.k8s.io/snapshotter-list-secret-name":          storageClassCredentialsRef,
+					"csi.storage.k8s.io/snapshotter-list-secret-namespace":     namespace,
+					"snapshot.storage.kubernetes.io/deletion-secret-name":      storageClassCredentialsRef,
+					"snapshot.storage.kubernetes.io/deletion-secret-namespace": namespace,
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			log.Info("snapshotstorageclass", "name", obj.ObjectMeta.Name, "operation", op)
+		}
+
 		log.Info("storageclass", "name", sc.Name, "operation", op)
 	}
 
 	return nil
+}
+
+func (r *DurosReconciler) shootK8sVersionGreater120() bool {
+	v, err := r.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return false
+	}
+	r.Log.Info("shoot kubernetes version", "version", v.String())
+	k8sVersion, err := semver.NewVersion(v.GitVersion)
+	if err != nil {
+		return false
+	}
+	greaterOrEqual120, err := semver.NewConstraint(">=v1.20.0")
+	if err != nil {
+		return false
+	}
+	return greaterOrEqual120.Check(k8sVersion)
 }
 
 type deletionResource struct {
