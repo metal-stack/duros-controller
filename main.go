@@ -24,6 +24,7 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/go-logr/zapr"
@@ -37,9 +38,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	storagev1 "github.com/metal-stack/duros-controller/api/v1"
+	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
 	duros "github.com/metal-stack/duros-go"
+
+	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -50,7 +53,8 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(storagev1.AddToScheme(scheme))
+	utilruntime.Must(duroscontrollerv1.AddToScheme(scheme))
+	utilruntime.Must(snapshotv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -128,6 +132,9 @@ func main() {
 	}
 
 	shootClient := mgr.GetClient()
+	var (
+		discoveryClient *discovery.DiscoveryClient
+	)
 	if len(shootKubeconfig) > 0 {
 		shootRestConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			&clientcmd.ClientConfigLoadingRules{ExplicitPath: shootKubeconfig},
@@ -140,6 +147,11 @@ func main() {
 		shootClient, err = client.New(shootRestConfig, client.Options{Scheme: scheme})
 		if err != nil {
 			setupLog.Error(err, "unable to create shoot client")
+			os.Exit(1)
+		}
+		discoveryClient, err = discovery.NewDiscoveryClientForConfig(shootRestConfig)
+		if err != nil {
+			setupLog.Error(err, "unable to create shoot discovery client")
 			os.Exit(1)
 		}
 	}
@@ -217,13 +229,14 @@ func main() {
 	}
 	setupLog.Info("connected", "duros version", version.ApiVersion, "cluster", cinfo.ApiEndpoints)
 	if err = (&controllers.DurosReconciler{
-		Client:      mgr.GetClient(),
-		Shoot:       shootClient,
-		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
-		Namespace:   namespace,
-		DurosClient: durosClient,
-		Endpoints:   durosEPs,
-		AdminKey:    ak,
+		Client:          mgr.GetClient(),
+		Shoot:           shootClient,
+		DiscoveryClient: discoveryClient,
+		Log:             ctrl.Log.WithName("controllers").WithName("LightBits"),
+		Namespace:       namespace,
+		DurosClient:     durosClient,
+		Endpoints:       durosEPs,
+		AdminKey:        ak,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LightBits")
 		os.Exit(1)
