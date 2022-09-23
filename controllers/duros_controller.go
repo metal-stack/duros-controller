@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -31,8 +32,7 @@ import (
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
-	storagev1 "github.com/metal-stack/duros-controller/api/v1"
-	v1 "github.com/metal-stack/duros-controller/api/v1"
+	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,12 +45,13 @@ const (
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
 	client.Client
-	Shoot       client.Client
-	Log         logr.Logger
-	Namespace   string
-	DurosClient durosv2.DurosAPIClient
-	Endpoints   duros.EPs
-	AdminKey    []byte
+	Shoot           client.Client
+	DiscoveryClient *discovery.DiscoveryClient
+	Log             logr.Logger
+	Namespace       string
+	DurosClient     durosv2.DurosAPIClient
+	Endpoints       duros.EPs
+	AdminKey        []byte
 }
 
 // Reconcile the Duros CRD
@@ -73,7 +74,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 	// first get the metal-api projectID
-	duros := &storagev1.Duros{}
+	duros := &duroscontrollerv1.Duros{}
 	if err := r.Get(ctx, req.NamespacedName, duros); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("no duros storage defined")
@@ -122,7 +123,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}, nil
 }
 
-func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.Duros) error {
+func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *duroscontrollerv1.Duros) error {
 	var (
 		updateTime = metav1.NewTime(time.Now())
 		ds         = &appsv1.DaemonSet{}
@@ -134,16 +135,16 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 		return fmt.Errorf("error getting daemon set: %w", err)
 	}
 
-	dsStatus := v1.ManagedResourceStatus{
+	dsStatus := duroscontrollerv1.ManagedResourceStatus{
 		Name:           ds.Name,
 		Group:          "DaemonSet", // ds.GetObjectKind().GroupVersionKind().String() --> this does not work :(
-		State:          v1.HealthStateRunning,
+		State:          duroscontrollerv1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
 	}
 
 	if ds.Status.DesiredNumberScheduled != ds.Status.NumberReady {
-		dsStatus.State = v1.HealthStateNotRunning
+		dsStatus.State = duroscontrollerv1.HealthStateNotRunning
 		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
 	}
 
@@ -152,10 +153,10 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 		return fmt.Errorf("error getting statefulset: %w", err)
 	}
 
-	stsStatus := v1.ManagedResourceStatus{
+	stsStatus := duroscontrollerv1.ManagedResourceStatus{
 		Name:           sts.Name,
 		Group:          "StatefulSet", // sts.GetObjectKind().GroupVersionKind().String() --> this does not work :(
-		State:          v1.HealthStateRunning,
+		State:          duroscontrollerv1.HealthStateRunning,
 		Description:    "All replicas are ready",
 		LastUpdateTime: updateTime,
 	}
@@ -166,11 +167,11 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 	}
 
 	if replicas != sts.Status.ReadyReplicas {
-		stsStatus.State = v1.HealthStateNotRunning
+		stsStatus.State = duroscontrollerv1.HealthStateNotRunning
 		stsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", sts.Status.ReadyReplicas, replicas)
 	}
 
-	duros.Status.ManagedResourceStatuses = []v1.ManagedResourceStatus{dsStatus, stsStatus}
+	duros.Status.ManagedResourceStatuses = []duroscontrollerv1.ManagedResourceStatus{dsStatus, stsStatus}
 	err = r.Status().Update(ctx, duros)
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
@@ -185,12 +186,12 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *storagev1.
 func (r *DurosReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	pred := predicate.GenerationChangedPredicate{} // prevents reconcile on status sub resource update
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&storagev1.Duros{}).
+		For(&duroscontrollerv1.Duros{}).
 		WithEventFilter(pred).
 		Complete(r)
 }
 
-func validateDuros(duros *v1.Duros) error {
+func validateDuros(duros *duroscontrollerv1.Duros) error {
 	if len(duros.Spec.MetalProjectID) == 0 {
 		return fmt.Errorf("metalProjectID is empty")
 	}
