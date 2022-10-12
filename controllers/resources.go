@@ -1014,7 +1014,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	for i := range scs {
 		sc := scs[i]
-
+		if sc.Encryption && !r.shootK8sVersionGreater120() {
+			log.Info("storageclass has encryption enabled but the k8s version is lower than 1.20, ignoring this storageclass", "name", sc.Name)
+			continue
+		}
 		annotations := map[string]string{
 			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
 			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
@@ -1047,6 +1050,19 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				obj.Parameters["compression"] = "enabled"
 			}
 
+			if sc.Encryption {
+				secretName := "storage-encryption-key"
+				//nolint:gosec
+				secretNamespace := "${pvc.namespace}"
+				obj.Parameters = map[string]string{
+					"compression":     "disabled",
+					"host-encryption": "enabled",
+					"csi.storage.k8s.io/node-publish-secret-name":      secretName,
+					"csi.storage.k8s.io/node-publish-secret-namespace": secretNamespace,
+					"csi.storage.k8s.io/node-stage-secret-name":        secretName,
+					"csi.storage.k8s.io/node-stage-secret-namespace":   secretNamespace,
+				}
+			}
 			return nil
 		})
 		if err != nil {
@@ -1060,50 +1076,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			}
 			return err
 		}
-
-		if sc.Encryption && r.shootK8sVersionGreater120() {
-			secretName := "storage-encryption-key"
-			//nolint:gosec
-			secretNamespace := "${pvc.namespace}"
-
-			obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name + "encrypted"}}
-			op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-				obj.ObjectMeta.Annotations = annotations
-				obj.Provisioner = provisioner
-				obj.AllowVolumeExpansion = pointer.Bool(true)
-				obj.Parameters = map[string]string{
-					"mgmt-scheme":     "grpcs",
-					"compression":     "disabled",
-					"host-encryption": "enabled",
-					"mgmt-endpoint":   r.Endpoints.String(),
-					"project-name":    projectID,
-					"replica-count":   strconv.Itoa(sc.ReplicaCount),
-					"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
-					"csi.storage.k8s.io/controller-expand-secret-namespace":  namespace,
-					"csi.storage.k8s.io/controller-publish-secret-name":      storageClassCredentialsRef,
-					"csi.storage.k8s.io/controller-publish-secret-namespace": namespace,
-					"csi.storage.k8s.io/node-publish-secret-name":            secretName,
-					"csi.storage.k8s.io/node-publish-secret-namespace":       secretNamespace,
-					"csi.storage.k8s.io/node-stage-secret-name":              secretName,
-					"csi.storage.k8s.io/node-stage-secret-namespace":         secretNamespace,
-					"csi.storage.k8s.io/provisioner-secret-name":             storageClassCredentialsRef,
-					"csi.storage.k8s.io/provisioner-secret-namespace":        namespace,
-				}
-				return nil
-			})
-			if err != nil {
-				// if error is of type Invalid, delete old storage class. Will be recreated immediately on next reconciliation
-				if apierrors.IsInvalid(err) {
-					err := r.Shoot.Delete(ctx, obj)
-					if err != nil {
-						return err
-					}
-					log.Info("storageclass", "name", sc.Name, "operation", "deleted")
-				}
-				return err
-			}
-		}
-
 		if r.shootK8sVersionGreater120() {
 			annotations := map[string]string{
 				"snapshot.storage.kubernetes.io/is-default-class": "true",
