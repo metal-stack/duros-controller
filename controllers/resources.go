@@ -1054,14 +1054,12 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				secretName := "storage-encryption-key"
 				//nolint:gosec
 				secretNamespace := "${pvc.namespace}"
-				obj.Parameters = map[string]string{
-					"compression":     "disabled",
-					"host-encryption": "enabled",
-					"csi.storage.k8s.io/node-publish-secret-name":      secretName,
-					"csi.storage.k8s.io/node-publish-secret-namespace": secretNamespace,
-					"csi.storage.k8s.io/node-stage-secret-name":        secretName,
-					"csi.storage.k8s.io/node-stage-secret-namespace":   secretNamespace,
-				}
+				obj.Parameters["compression"] = "disabled"
+				obj.Parameters["host-encryption"] = "enabled"
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = secretNamespace
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = secretNamespace
 			}
 			return nil
 		})
