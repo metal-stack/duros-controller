@@ -474,7 +474,7 @@ var (
 	// ResourceLimits
 	cpu100m, _            = resource.ParseQuantity("100m")
 	memory100m, _         = resource.ParseQuantity("100M")
-	memory4Gi, _         = resource.ParseQuantity("4Gi")
+	memory4Gi, _          = resource.ParseQuantity("4Gi")
 	defaultResourceLimits = corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			"cpu":    cpu100m,
@@ -877,7 +877,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		}
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
 		snapshotsSupported = true
-		if r.shootK8sVersionGreater120() {
+		if r.shootK8sVersionGreaterOrEqual120() {
 			snapshotControllerContainer.Image = snapshotControllerImage
 			csiSnapshotterContainer.Image = csiSnapshotterImage
 		} else {
@@ -1012,7 +1012,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	for i := range scs {
 		sc := scs[i]
-		if sc.Encryption && !r.shootK8sVersionGreater120() {
+		if sc.Encryption && !r.shootK8sVersionGreaterOrEqual120() {
 			log.Info("storageclass has encryption enabled but the k8s version is lower than 1.20, ignoring this storageclass", "name", sc.Name)
 			continue
 		}
@@ -1072,7 +1072,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			}
 			return err
 		}
-		if r.shootK8sVersionGreater120() {
+		if r.shootK8sVersionGreaterOrEqual120() {
 			annotations := map[string]string{
 				"snapshot.storage.kubernetes.io/is-default-class": "true",
 				metaltag.ClusterDescription:                       "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
@@ -1104,7 +1104,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	return nil
 }
 
-func (r *DurosReconciler) shootK8sVersionGreater120() bool {
+func (r *DurosReconciler) shootK8sVersionGreaterOrEqual120() bool {
 	v, err := r.DiscoveryClient.ServerVersion()
 	if err != nil {
 		return false
