@@ -474,16 +474,14 @@ var (
 	// ResourceLimits
 	cpu100m, _            = resource.ParseQuantity("100m")
 	memory100m, _         = resource.ParseQuantity("100M")
-	cpu200m, _            = resource.ParseQuantity("200m")
-	memory200m, _         = resource.ParseQuantity("200M")
+	memory4Gi, _          = resource.ParseQuantity("4Gi")
 	defaultResourceLimits = corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			"cpu":    cpu100m,
 			"memory": memory100m,
 		},
 		Limits: corev1.ResourceList{
-			"cpu":    cpu200m,
-			"memory": memory200m,
+			"memory": memory4Gi,
 		},
 	}
 
@@ -879,7 +877,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		}
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
 		snapshotsSupported = true
-		if r.shootK8sVersionGreater120() {
+		if r.shootK8sVersionGreaterOrEqual120() {
 			snapshotControllerContainer.Image = snapshotControllerImage
 			csiSnapshotterContainer.Image = csiSnapshotterImage
 		} else {
@@ -1014,7 +1012,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	for i := range scs {
 		sc := scs[i]
-
+		if sc.Encryption && !r.shootK8sVersionGreaterOrEqual120() {
+			log.Info("storageclass has encryption enabled but the k8s version is lower than 1.20, ignoring this storageclass", "name", sc.Name)
+			continue
+		}
 		annotations := map[string]string{
 			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
 			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
@@ -1046,18 +1047,18 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			if sc.Compression {
 				obj.Parameters["compression"] = "enabled"
 			}
-			// if sc.Encryption {
-			// 	secretName := "storage-encryption-key"
-			// 	//nolint:gosec
-			// 	secretNamespace := "${pvc.namespace}"
-			// 	obj.Parameters["encryption"] = "enabled"
-			// 	obj.Parameters["csi.storage.k8s.io/controller-expand-secret-name"] = secretName
-			// 	obj.Parameters["csi.storage.k8s.io/controller-expand-secret-namespace"] = secretNamespace
-			// 	obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = secretName
-			// 	obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = secretNamespace
-			// 	obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = secretName
-			// 	obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = secretNamespace
-			// }
+
+			if sc.Encryption {
+				secretName := "storage-encryption-key"
+				//nolint:gosec
+				secretNamespace := "${pvc.namespace}"
+				obj.Parameters["compression"] = "disabled"
+				obj.Parameters["host-encryption"] = "enabled"
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/node-publish-secret-namespace"] = secretNamespace
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-name"] = secretName
+				obj.Parameters["csi.storage.k8s.io/node-stage-secret-namespace"] = secretNamespace
+			}
 			return nil
 		})
 		if err != nil {
@@ -1071,8 +1072,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			}
 			return err
 		}
-
-		if r.shootK8sVersionGreater120() {
+		if r.shootK8sVersionGreaterOrEqual120() {
 			annotations := map[string]string{
 				"snapshot.storage.kubernetes.io/is-default-class": "true",
 				metaltag.ClusterDescription:                       "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
@@ -1104,7 +1104,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	return nil
 }
 
-func (r *DurosReconciler) shootK8sVersionGreater120() bool {
+func (r *DurosReconciler) shootK8sVersionGreaterOrEqual120() bool {
 	v, err := r.DiscoveryClient.ServerVersion()
 	if err != nil {
 		return false
