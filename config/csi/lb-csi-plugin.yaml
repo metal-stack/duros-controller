@@ -448,10 +448,6 @@ spec:
             - "--v=4"
             - "--csi-address=$(ADDRESS)"
             - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/bin/sh", "-c", "rm -rf /registration/csi.lightbitslabs.com /registration/csi.lightbitslabs.com-reg.sock"]
           env:
             - name: ADDRESS
               value: /csi/csi.sock
