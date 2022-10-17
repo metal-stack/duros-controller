@@ -498,6 +498,13 @@ spec:
             path: /lib/modules
         - name: discovery-client-dir
           emptyDir: {}
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
 
 ---
 kind: StatefulSet
