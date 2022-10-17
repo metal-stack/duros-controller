@@ -474,7 +474,6 @@ var (
 	// ResourceLimits
 	cpu100m, _            = resource.ParseQuantity("100m")
 	memory100m, _         = resource.ParseQuantity("100M")
-	cpu200m, _            = resource.ParseQuantity("200m")
 	memory200m, _         = resource.ParseQuantity("200M")
 	defaultResourceLimits = corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
@@ -482,7 +481,6 @@ var (
 			"memory": memory100m,
 		},
 		Limits: corev1.ResourceList{
-			"cpu":    cpu200m,
 			"memory": memory200m,
 		},
 	}
