@@ -291,7 +291,7 @@ spec:
           # if hosting the K8s CSI plugin sidecar container images in a
           # different registry, e.g. a local private Docker registry,
           # modify the image identifier below accordingly:
-          image: k8s.gcr.io/sig-storage/csi-provisioner:v1.5.0
+          image: registry.k8s.io/sig-storage/csi-provisioner:v1.5.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--v=4"
@@ -316,7 +316,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-resizer
-          image: k8s.gcr.io/sig-storage/csi-resizer:v0.5.0
+          image: registry.k8s.io/sig-storage/csi-resizer:v0.5.0
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
@@ -443,7 +443,7 @@ spec:
           # if hosting the K8s CSI plugin sidecar container images in a
           # different registry, e.g. a local private Docker registry,
           # modify the image identifier below accordingly:
-          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v1.2.0
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v1.2.0
           args:
             - "--v=4"
             - "--csi-address=$(ADDRESS)"
