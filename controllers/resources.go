@@ -711,21 +711,35 @@ var (
 	}
 
 	// Node DaemonSet
-	nodeRoleLabels   = map[string]string{"app": lbCSINodeName, "role": "node"}
 	csiNodeDaemonSet = apps.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSINodeName,
 			Namespace: namespace,
-			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+			Labels: map[string]string{
+				"shoot.gardener.cloud/no-cleanup":        "true",
+				"node.gardener.cloud/critical-component": "true",
+			},
 		},
 		Spec: apps.DaemonSetSpec{
-			Selector: &metav1.LabelSelector{MatchLabels: nodeRoleLabels},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app":  lbCSINodeName,
+					"role": "node",
+				},
+			},
 			UpdateStrategy: apps.DaemonSetUpdateStrategy{
 				Type:          apps.RollingUpdateDaemonSetStrategyType,
 				RollingUpdate: &apps.RollingUpdateDaemonSet{MaxUnavailable: &intstr.IntOrString{IntVal: 1}},
 			},
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: nodeRoleLabels},
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app":                                    lbCSINodeName,
+						"role":                                   "node",
+						"node.gardener.cloud/critical-component": "true",
+					},
+					Annotations: map[string]string{"node.gardener.cloud/wait-for-csi-node-lightbits": provisioner},
+				},
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
 						nodeInitContainer,
