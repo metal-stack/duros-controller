@@ -1144,7 +1144,7 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 	}
 
 	log.Info("cleaning up resource", "name", resource.Key.Name, "namespace", resource.Key.Namespace)
-	return wait.PollImmediateInfiniteWithContext(ctx, 100*time.Millisecond, func(context.Context) (done bool, err error) {
+	return wait.PollUntilContextCancel(ctx, 100*time.Millisecond, true, func(context.Context) (done bool, err error) {
 		err = r.Shoot.Delete(ctx, resource.Object)
 
 		if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
