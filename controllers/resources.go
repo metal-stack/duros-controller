@@ -910,17 +910,19 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		return err
 	}
 
-	for i := range psps {
-		psp := psps[i]
-		obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Spec = psp.Spec
-			return nil
-		})
-		if err != nil {
-			return err
+	if r.shootK8sVersionLowerThan125() {
+		for i := range psps {
+			psp := psps[i]
+			obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
+			op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
+				obj.Spec = psp.Spec
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			log.Info("psp", "name", psp.Name, "operation", op)
 		}
-		log.Info("psp", "name", psp.Name, "operation", op)
 	}
 
 	for i := range serviceAccounts {
@@ -1109,6 +1111,22 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 
 	return nil
+}
+func (r *DurosReconciler) shootK8sVersionLowerThan125() bool {
+	v, err := r.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return false
+	}
+	r.Log.Info("shoot kubernetes version", "version", v.String())
+	k8sVersion, err := semver.NewVersion(v.GitVersion)
+	if err != nil {
+		return false
+	}
+	lowerThan125, err := semver.NewConstraint("<v1.25.0")
+	if err != nil {
+		return false
+	}
+	return lowerThan125.Check(k8sVersion)
 }
 
 func (r *DurosReconciler) shootK8sVersionGreaterOrEqual120() bool {
