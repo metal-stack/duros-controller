@@ -367,7 +367,7 @@ var (
 	}
 
 	clusterRoles = []rbac.ClusterRole{
-		nodeClusterRole,
+		// nodeClusterRole, // Must only be granted if <v1.25
 		attacherClusterRole,
 		ctrlClusterRole,
 		resizerClusterRole,
@@ -923,6 +923,9 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			}
 			log.Info("psp", "name", psp.Name, "operation", op)
 		}
+
+		// for >= 1.25 this clusterrole is not needed
+		clusterRoles = append(clusterRoles, nodeClusterRole)
 	}
 
 	for i := range serviceAccounts {
