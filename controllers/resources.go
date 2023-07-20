@@ -122,14 +122,7 @@ var (
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "lb-csi-node",
 		},
-		Rules: []rbac.PolicyRule{
-			{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{nodeServiceAccount.Name},
-			},
-		},
+		Rules: []rbac.PolicyRule{},
 	}
 	nodeClusterRoleBinding = rbac.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -149,11 +142,17 @@ var (
 		},
 	}
 
-	policyRuleForPSP = rbac.PolicyRule{
+	ctrlPolicyRuleForPSP = rbac.PolicyRule{
 		APIGroups:     []string{"policy"},
 		Resources:     []string{"podsecuritypolicies"},
 		Verbs:         []string{"use"},
 		ResourceNames: []string{ctrlServiceAccount.Name},
+	}
+	nodePolicyRuleForPSP = rbac.PolicyRule{
+		APIGroups:     []string{"policy"},
+		Resources:     []string{"podsecuritypolicies"},
+		Verbs:         []string{"use"},
+		ResourceNames: []string{nodeServiceAccount.Name},
 	}
 
 	ctrlClusterRole = rbac.ClusterRole{
@@ -914,10 +913,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			log.Info("psp", "name", psp.Name, "operation", op)
 		}
 
-		ctrlClusterRole.Rules = append(ctrlClusterRole.Rules, policyRuleForPSP)
-		attacherClusterRole.Rules = append(attacherClusterRole.Rules, policyRuleForPSP)
-		resizerClusterRole.Rules = append(resizerClusterRole.Rules, policyRuleForPSP)
-		clusterRoles = append(clusterRoles, nodeClusterRole)
+		ctrlClusterRole.Rules = append(ctrlClusterRole.Rules, ctrlPolicyRuleForPSP)
+		attacherClusterRole.Rules = append(attacherClusterRole.Rules, ctrlPolicyRuleForPSP)
+		resizerClusterRole.Rules = append(resizerClusterRole.Rules, ctrlPolicyRuleForPSP)
+		nodeClusterRole.Rules = append(nodeClusterRole.Rules, nodePolicyRuleForPSP)
 	}
 
 	for i := range serviceAccounts {
