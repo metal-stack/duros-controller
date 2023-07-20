@@ -125,8 +125,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zk
 github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/metal-stack/duros-go v0.4.2 h1:AhehmgutauVQDxVhl4YTkKx1TSPZG47coFW2XnEADZ0=
 github.com/metal-stack/duros-go v0.4.2/go.mod h1:M0n5ZgeXny9iasQPzWEdmR8E1sfg2Vvmvx3KmAZMOz8=
-github.com/metal-stack/metal-lib v0.12.3 h1:IsurXFoLpgJ/9GG3zsAYmk72tukcJSw40UvPYI47rEI=
-github.com/metal-stack/metal-lib v0.12.3/go.mod h1:j9I8YAqxS8AFZ6z0T113hlwy2MHpb0ExQsGhi6zlteI=
+github.com/metal-stack/metal-lib v0.12.4-0.20230720090323-0aea43a00565 h1:Ef+Q7EOIRT1Ri4BSaQW/PAnPGFAa+8j3VH5ERofT/R4=
+github.com/metal-stack/metal-lib v0.12.4-0.20230720090323-0aea43a00565/go.mod h1:YyE9IbyA38sgoyrgBZgvmlWhwUU6G+o4+tqNiLDXOgI=
 github.com/metal-stack/v v1.0.3 h1:Sh2oBlnxrCUD+mVpzfC8HiqL045YWkxs0gpTvkjppqs=
 github.com/metal-stack/v v1.0.3/go.mod h1:YTahEu7/ishwpYKnp/VaW/7nf8+PInogkfGwLcGPdXg=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=

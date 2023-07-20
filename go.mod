@@ -9,7 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.2.0
 	github.com/metal-stack/duros-go v0.4.2
-	github.com/metal-stack/metal-lib v0.12.3
+	github.com/metal-stack/metal-lib v0.12.4-0.20230720090323-0aea43a00565
 	github.com/metal-stack/v v1.0.3
 	go.uber.org/zap v1.24.0
 	google.golang.org/grpc v1.56.1
