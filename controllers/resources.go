@@ -355,7 +355,7 @@ var (
 	}
 
 	clusterRoles = []rbac.ClusterRole{
-		// nodeClusterRole, // Must only be granted if <v1.25
+		nodeClusterRole,
 		attacherClusterRole,
 		ctrlClusterRole,
 		resizerClusterRole,
