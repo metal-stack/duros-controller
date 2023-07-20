@@ -149,6 +149,13 @@ var (
 		},
 	}
 
+	policyRuleForPSP = rbac.PolicyRule{
+		APIGroups:     []string{"policy"},
+		Resources:     []string{"podsecuritypolicies"},
+		Verbs:         []string{"use"},
+		ResourceNames: []string{ctrlServiceAccount.Name},
+	}
+
 	ctrlClusterRole = rbac.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "lb-csi-provisioner-role",
@@ -204,12 +211,6 @@ var (
 				Resources: []string{"nodes"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
-			{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount.Name},
-			},
 		},
 	}
 
@@ -237,12 +238,6 @@ var (
 				APIGroups: []string{"storage.k8s.io"},
 				Resources: []string{"volumeattachments", "volumeattachments/status"},
 				Verbs:     []string{"get", "list", "watch", "update", "patch"},
-			},
-			{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount.Name},
 			},
 		},
 	}
@@ -276,12 +271,6 @@ var (
 				APIGroups: []string{""},
 				Resources: []string{"pods"},
 				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount.Name},
 			},
 		},
 	}
@@ -910,6 +899,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		return err
 	}
 
+	// Add PSP related stuff only for k8s < v1.25
 	if r.shootK8sVersionLowerThan125() {
 		for i := range psps {
 			psp := psps[i]
@@ -924,7 +914,9 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			log.Info("psp", "name", psp.Name, "operation", op)
 		}
 
-		// for >= 1.25 this clusterrole is not needed
+		ctrlClusterRole.Rules = append(ctrlClusterRole.Rules, policyRuleForPSP)
+		attacherClusterRole.Rules = append(attacherClusterRole.Rules, policyRuleForPSP)
+		resizerClusterRole.Rules = append(resizerClusterRole.Rules, policyRuleForPSP)
 		clusterRoles = append(clusterRoles, nodeClusterRole)
 	}
 
