@@ -3,13 +3,12 @@ module github.com/metal-stack/duros-controller
 go 1.20
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.4
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.2.0
 	github.com/metal-stack/duros-go v0.4.2
-	github.com/metal-stack/metal-lib v0.12.3
+	github.com/metal-stack/metal-lib v0.12.4
 	github.com/metal-stack/v v1.0.3
 	go.uber.org/zap v1.24.0
 	google.golang.org/grpc v1.56.1
@@ -21,6 +20,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
