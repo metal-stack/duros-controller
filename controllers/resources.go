@@ -855,10 +855,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	if err != nil {
 		return err
 	}
-	lessThan125, err := k8s.LessThan(kubernetesVersion, k8s.KubernetesV125)
-	if err != nil {
-		return err
-	}
 
 	rm := r.Shoot.RESTMapper()
 	gkv, err := rm.ResourceFor(schema.GroupVersionResource{
