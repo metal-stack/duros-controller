@@ -913,7 +913,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 
 	// Add PSP related stuff only for k8s < v1.25
-	if lessThan125 {
+	if !r.PSPDisabled {
 		for i := range psps {
 			psp := psps[i]
 			obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}

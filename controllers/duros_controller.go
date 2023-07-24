@@ -52,6 +52,7 @@ type DurosReconciler struct {
 	DurosClient     durosv2.DurosAPIClient
 	Endpoints       duros.EPs
 	AdminKey        []byte
+	PSPDisabled     bool
 }
 
 // Reconcile the Duros CRD

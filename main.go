@@ -73,6 +73,9 @@ func main() {
 		apiCA       string
 		apiKey      string
 		apiCert     string
+
+		// PSP disabled for k8s v1.25 migration
+		pspDisabled bool
 	)
 	flag.StringVar(&logLevel, "log-level", "", "The log level of the controller.")
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
@@ -89,6 +92,7 @@ func main() {
 	flag.StringVar(&apiCA, "api-ca", "", "The api endpoint ca")
 	flag.StringVar(&apiCert, "api-cert", "", "The api endpoint cert")
 	flag.StringVar(&apiKey, "api-key", "", "The api endpoint key")
+	flag.BoolVar(&pspDisabled, "psp-disabled", false, "if set to true, deployment of PSP related objects is disabled")
 
 	flag.Parse()
 
@@ -237,6 +241,7 @@ func main() {
 		DurosClient:     durosClient,
 		Endpoints:       durosEPs,
 		AdminKey:        ak,
+		PSPDisabled:     pspDisabled,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LightBits")
 		os.Exit(1)
