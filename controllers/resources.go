@@ -1006,6 +1006,19 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		}
 		log.Info("psp", "name", psp.Name, "operation", op)
 	}
+	// Also delete PSPs if disabled
+	for i := range psps(r.PSPDisabled) {
+		psp := psps(r.PSPDisabled)[i]
+		obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
+		err := r.deleteResourceWithWait(ctx, log, deletionResource{
+			Key:    types.NamespacedName{Name: psp.Name, Namespace: psp.Namespace},
+			Object: obj,
+		})
+		if err != nil {
+			return err
+		}
+		log.Info("psp deleted", "name", psp.Name)
+	}
 
 	for i := range serviceAccounts() {
 		sa := serviceAccounts()[i]
