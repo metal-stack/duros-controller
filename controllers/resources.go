@@ -1212,6 +1212,7 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 	}
 
 	log.Info("cleaning up resource", "name", resource.Key.Name, "namespace", resource.Key.Namespace)
+	// nolint:staticcheck
 	return wait.PollImmediateInfiniteWithContext(ctx, 100*time.Millisecond, func(context.Context) (done bool, err error) {
 		err = r.Shoot.Delete(ctx, resource.Object)
 
