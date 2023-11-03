@@ -94,13 +94,13 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err != nil {
 		return requeue, err
 	}
-	log.Info("created project", "name", p.Name)
+	log.Info("created project", "name", p.GetName())
 
 	cred, err := r.createProjectCredentialsIfNotExist(ctx, projectID, r.AdminKey)
 	if err != nil {
 		return requeue, err
 	}
-	log.Info("created credential", "id", cred.ID, "project", cred.ProjectName)
+	log.Info("created credential", "id", cred.GetID(), "project", cred.GetProjectName())
 
 	err = r.reconcileStorageClassSecret(ctx, cred, r.AdminKey)
 	if err != nil {
