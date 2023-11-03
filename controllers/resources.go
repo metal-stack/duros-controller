@@ -833,6 +833,17 @@ var (
 						discoveryClientDirVolume,
 						etcDirVolume,
 					},
+					Tolerations: []corev1.Toleration{
+						{
+							Effect: corev1.TaintEffectNoSchedule, Operator: corev1.TolerationOpExists,
+						},
+						{
+							Effect: corev1.TaintEffectNoExecute, Operator: corev1.TolerationOpExists,
+						},
+						{
+							Key: "CriticalAddonsOnly", Operator: corev1.TolerationOpExists,
+						},
+					},
 				},
 			},
 		},
@@ -900,7 +911,7 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, log logr
 		return err
 	}
 
-	token, err := duros.NewJWTTokenForCredential(r.Namespace, "duros-controller", credential, []string{credential.ProjectName + ":admin"}, tokenLifetime, key)
+	token, err := duros.NewJWTTokenForCredential(r.Namespace, "duros-controller", credential, []string{credential.GetProjectName() + ":admin"}, tokenLifetime, key)
 	if err != nil {
 		return fmt.Errorf("unable to create jwt token:%w", err)
 	}

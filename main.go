@@ -231,7 +231,7 @@ func main() {
 		setupLog.Error(err, "unable to query duros api for cluster info")
 		os.Exit(1)
 	}
-	setupLog.Info("connected", "duros version", version.ApiVersion, "cluster", cinfo.ApiEndpoints)
+	setupLog.Info("connected", "duros version", version.GetApiVersion(), "cluster", cinfo.GetApiEndpoints())
 	if err = (&controllers.DurosReconciler{
 		Client:          mgr.GetClient(),
 		Shoot:           shootClient,
