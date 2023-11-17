@@ -788,7 +788,9 @@ var (
 			Name:      lbCSINodeName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"shoot.gardener.cloud/no-cleanup":        "true",
+				// cannot be used as we don't have a deletion flow
+				// https://github.com/metal-stack/duros-controller/pull/28
+				// "shoot.gardener.cloud/no-cleanup":        "true",
 				"node.gardener.cloud/critical-component": "true",
 			},
 		},
@@ -1061,7 +1063,11 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSIControllerName,
 			Namespace: namespace,
-			Labels:    map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+			Labels:    map[string]string{
+				// cannot be used as we don't have a deletion flow
+				// https://github.com/metal-stack/duros-controller/pull/28
+				// "shoot.gardener.cloud/no-cleanup":        "true",
+			},
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
