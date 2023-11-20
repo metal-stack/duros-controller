@@ -74,6 +74,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if req.Namespace != r.Namespace {
 		return ctrl.Result{}, nil
 	}
+
 	// first get the metal-api projectID
 	duros := &duroscontrollerv1.Duros{}
 	if err := r.Get(ctx, req.NamespacedName, duros); err != nil {
@@ -83,6 +84,12 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 		return requeue, err
 	}
+
+	if duros.GetDeletionTimestamp() != nil && !duros.GetDeletionTimestamp().IsZero() {
+		log.Info("deletion timestamp is set, not doing anything, Gardener will do the cleanup")
+		return ctrl.Result{}, nil
+	}
+
 	err := validateDuros(duros)
 	if err != nil {
 		return requeue, err
