@@ -787,12 +787,6 @@ var (
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSINodeName,
 			Namespace: namespace,
-			Labels: map[string]string{
-				// cannot be used as we don't have a deletion flow
-				// https://github.com/metal-stack/duros-controller/pull/28
-				// "shoot.gardener.cloud/no-cleanup":        "true",
-				"node.gardener.cloud/critical-component": "true",
-			},
 		},
 		Spec: apps.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -1063,15 +1057,9 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSIControllerName,
 			Namespace: namespace,
-			Labels:    map[string]string{
-				// cannot be used as we don't have a deletion flow
-				// https://github.com/metal-stack/duros-controller/pull/28
-				// "shoot.gardener.cloud/no-cleanup":        "true",
-			},
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-
 		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
 		containers := []corev1.Container{
 			csiPluginContainer,
@@ -1083,6 +1071,11 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			containers = append(containers, snapshotControllerContainer, csiSnapshotterContainer)
 		}
 
+		sts.Labels = map[string]string{
+			// cannot be used as we don't have a deletion flow
+			// https://github.com/metal-stack/duros-controller/pull/28
+			// "shoot.gardener.cloud/no-cleanup":        "true",
+		}
 		sts.Spec = apps.StatefulSetSpec{
 			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
 			ServiceName: "lb-csi-ctrl-svc",
@@ -1110,6 +1103,12 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	ds := &apps.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: csiNodeDaemonSet.Name, Namespace: csiNodeDaemonSet.Namespace}}
 	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, ds, func() error {
+		ds.Labels = map[string]string{
+			// cannot be used as we don't have a deletion flow
+			// https://github.com/metal-stack/duros-controller/pull/28
+			// "shoot.gardener.cloud/no-cleanup":        "true",
+			"node.gardener.cloud/critical-component": "true",
+		}
 		ds.Spec = csiNodeDaemonSet.Spec
 		return nil
 	})
