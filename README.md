@@ -7,6 +7,10 @@ After the authentication token is created, it creates a storage class deployment
 
 ![Architecture](architecture.drawio.svg)
 
+The Dataplane is built like this:
+
+![Dataplane](dataplane.drawio.svg)
+
 ## Configuration
 
 The configuration is done through a CustomResource in the shoot namespace in the seed. The Duros CustomResource contains a Reference to the metal-api project the Endpoints and the name of StorageClasses which should be created. The JWT Token is stored as StorageClass Secret.
