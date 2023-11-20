@@ -1071,7 +1071,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			containers = append(containers, snapshotControllerContainer, csiSnapshotterContainer)
 		}
 
-		sts.ObjectMeta.Labels = map[string]string{
+		sts.Labels = map[string]string{
 			// cannot be used as we don't have a deletion flow
 			// https://github.com/metal-stack/duros-controller/pull/28
 			// "shoot.gardener.cloud/no-cleanup":        "true",
