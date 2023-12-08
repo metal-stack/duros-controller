@@ -976,9 +976,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if greaterOrEqual120 {
 			snapshotControllerContainer.Image = snapshotControllerImage
 			csiSnapshotterContainer.Image = csiSnapshotterImage
-		} else {
-			snapshotControllerContainer.Image = snapshotControllerImageBeta1
-			csiSnapshotterContainer.Image = csiSnapshotterImageBeta1
 		}
 	case "v1beta1":
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
