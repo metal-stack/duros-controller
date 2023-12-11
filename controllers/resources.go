@@ -10,7 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
-	"github.com/metal-stack/metal-lib/pkg/k8s"
 	metaltag "github.com/metal-stack/metal-lib/pkg/tag"
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
@@ -937,16 +936,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	log := r.Log.WithName("storage-csi")
 	log.Info("deploy storage-class")
 
-	v, err := r.DiscoveryClient.ServerVersion()
-	if err != nil {
-		return err
-	}
-	kubernetesVersion := v.String()
-	greaterOrEqual120, err := k8s.GreaterThanOrEqual(kubernetesVersion, k8s.KubernetesV120)
-	if err != nil {
-		return err
-	}
-
 	rm := r.Shoot.RESTMapper()
 	gkv, err := rm.ResourceFor(schema.GroupVersionResource{
 		Group:    "storage.k8s.io",
@@ -973,10 +962,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		}
 		log.Info("csidriver", "name", csiDriver.Name, "operation", op)
 		snapshotsSupported = true
-		if greaterOrEqual120 {
-			snapshotControllerContainer.Image = snapshotControllerImage
-			csiSnapshotterContainer.Image = csiSnapshotterImage
-		}
+		snapshotControllerContainer.Image = snapshotControllerImage
+		csiSnapshotterContainer.Image = csiSnapshotterImage
 	case "v1beta1":
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
@@ -1116,10 +1103,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	for i := range scs {
 		sc := scs[i]
-		if sc.Encryption && !greaterOrEqual120 {
-			log.Info("storageclass has encryption enabled but the k8s version is lower than 1.20, ignoring this storageclass", "name", sc.Name)
-			continue
-		}
 		annotations := map[string]string{
 			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
 			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
@@ -1177,33 +1160,33 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			return err
 		}
 
-		if greaterOrEqual120 {
-			annotations := map[string]string{
-				"snapshot.storage.kubernetes.io/is-default-class": "true",
-				metaltag.ClusterDescription:                       "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
-			}
-			obj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
-			op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-				obj.ObjectMeta.Annotations = annotations
-				obj.Driver = provisioner
-				obj.DeletionPolicy = snapshotv1.VolumeSnapshotContentDelete
-				obj.Parameters = map[string]string{
-					"csi.storage.k8s.io/snapshotter-secret-name":               storageClassCredentialsRef,
-					"csi.storage.k8s.io/snapshotter-secret-namespace":          namespace,
-					"csi.storage.k8s.io/snapshotter-list-secret-name":          storageClassCredentialsRef,
-					"csi.storage.k8s.io/snapshotter-list-secret-namespace":     namespace,
-					"snapshot.storage.kubernetes.io/deletion-secret-name":      storageClassCredentialsRef,
-					"snapshot.storage.kubernetes.io/deletion-secret-namespace": namespace,
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-			log.Info("snapshotstorageclass", "name", obj.ObjectMeta.Name, "operation", op)
-		}
-
 		log.Info("storageclass", "name", sc.Name, "operation", op)
+
+		// Snapshot Volume Class
+		snapannotations := map[string]string{
+			"snapshot.storage.kubernetes.io/is-default-class": "true",
+			metaltag.ClusterDescription:                       "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
+		}
+		snapobj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
+		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, snapobj, func() error {
+			snapobj.ObjectMeta.Annotations = snapannotations
+			snapobj.Driver = provisioner
+			snapobj.DeletionPolicy = snapshotv1.VolumeSnapshotContentDelete
+			snapobj.Parameters = map[string]string{
+				"csi.storage.k8s.io/snapshotter-secret-name":               storageClassCredentialsRef,
+				"csi.storage.k8s.io/snapshotter-secret-namespace":          namespace,
+				"csi.storage.k8s.io/snapshotter-list-secret-name":          storageClassCredentialsRef,
+				"csi.storage.k8s.io/snapshotter-list-secret-namespace":     namespace,
+				"snapshot.storage.kubernetes.io/deletion-secret-name":      storageClassCredentialsRef,
+				"snapshot.storage.kubernetes.io/deletion-secret-namespace": namespace,
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		log.Info("snapshotstorageclass", "name", snapobj.ObjectMeta.Name, "operation", op)
+
 	}
 
 	return nil

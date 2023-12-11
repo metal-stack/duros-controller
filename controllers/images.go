@@ -7,6 +7,6 @@ const (
 	csiAttacherImage            = "registry.k8s.io/sig-storage/csi-attacher:v4.4.2"
 	csiResizerImage             = "registry.k8s.io/sig-storage/csi-resizer:v1.9.2"
 	csiNodeDriverRegistrarImage = "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.9.2"
-	snapshotControllerImage     = "registry.k8s.io/sig-storage/snapshot-controller:v6.3.2" // for k8s >= 1.20
-	csiSnapshotterImage         = "registry.k8s.io/sig-storage/csi-snapshotter:v6.3.2"     // for k8s >= 1.20
+	snapshotControllerImage     = "registry.k8s.io/sig-storage/snapshot-controller:v6.3.2"
+	csiSnapshotterImage         = "registry.k8s.io/sig-storage/csi-snapshotter:v6.3.2"
 )
