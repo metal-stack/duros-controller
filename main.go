@@ -233,7 +233,7 @@ func main() {
 	}
 	setupLog.Info("connected", "duros version", version.GetApiVersion(), "cluster", cinfo.GetApiEndpoints())
 	if err = (&controllers.DurosReconciler{
-		Client:          mgr.GetClient(),
+		Seed:            mgr.GetClient(),
 		Shoot:           shootClient,
 		DiscoveryClient: discoveryClient,
 		Log:             ctrl.Log.WithName("controllers").WithName("LightBits"),

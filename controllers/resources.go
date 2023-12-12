@@ -563,6 +563,7 @@ var (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"-P"},
 		Env: []corev1.EnvVar{
+			shootKubeconfigEnvVar,
 			{Name: "CSI_ENDPOINT", Value: "unix:///var/lib/csi/sockets/pluginproxy/csi.sock"},
 			{Name: "KUBE_NODE_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
 			{Name: "LB_CSI_NODE_ID", Value: "$(KUBE_NODE_NAME).ctrl"},
@@ -572,6 +573,7 @@ var (
 			{Name: "LB_CSI_LOG_TIME", Value: "true"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
+			shootKubeconfigVolumeMount,
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 			{Name: etcDirVolume.Name, MountPath: "/etc/lb-csi/"},
 		},
@@ -583,9 +585,11 @@ var (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4", "--default-fstype=ext4"},
 		Env: []corev1.EnvVar{
+			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
+			shootKubeconfigVolumeMount,
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
@@ -596,9 +600,11 @@ var (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=5"},
 		Env: []corev1.EnvVar{
+			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
+			shootKubeconfigVolumeMount,
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
@@ -609,9 +615,11 @@ var (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4"},
 		Env: []corev1.EnvVar{
+			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
+			shootKubeconfigVolumeMount,
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
@@ -621,7 +629,13 @@ var (
 		Image:           snapshotControllerImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--leader-election=false", "--v=5"},
-		Resources:       defaultResourceLimits,
+		Env: []corev1.EnvVar{
+			shootKubeconfigEnvVar,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			shootKubeconfigVolumeMount,
+		},
+		Resources: defaultResourceLimits,
 	}
 	csiSnapshotterContainer = corev1.Container{
 		Name:            "csi-snapshotter",
@@ -629,9 +643,11 @@ var (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--csi-address=$(ADDRESS)", "--leader-election=false", "--v=5"},
 		Env: []corev1.EnvVar{
+			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
+			shootKubeconfigVolumeMount,
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
@@ -780,6 +796,46 @@ var (
 			},
 		},
 	}
+	shootKubeconfigVolume = corev1.Volume{
+		Name: "kubeconfig",
+		VolumeSource: corev1.VolumeSource{
+			Projected: &corev1.ProjectedVolumeSource{
+				DefaultMode: pointer.Int32(420),
+				Sources: []corev1.VolumeProjection{
+					{
+						Secret: &corev1.SecretProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "generic-token-kubeconfig",
+							},
+							Items: []corev1.KeyToPath{
+								{
+									Key:  "kubeconfig",
+									Path: "kubeconfig",
+								},
+							},
+							Optional: pointer.Bool(false),
+						},
+					},
+					{
+						Secret: &corev1.SecretProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "shoot-access-lb-csi-ctrl-sa", // TODO: create by GEPM and pass name of this secret
+							},
+							Items: []corev1.KeyToPath{
+								{
+									Key:  "token",
+									Path: "token",
+								},
+							},
+							Optional: pointer.Bool(false),
+						},
+					},
+				},
+			},
+		},
+	}
+	shootKubeconfigEnvVar      = corev1.EnvVar{Name: "KUBECONFIG", Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig"}
+	shootKubeconfigVolumeMount = corev1.VolumeMount{Name: "kubeconfig", MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig", ReadOnly: true}
 
 	// Node DaemonSet
 	csiNodeDaemonSet = apps.DaemonSet{
@@ -1043,7 +1099,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			Namespace: namespace,
 		},
 	}
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Seed, sts, func() error {
 		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
 		containers := []corev1.Container{
 			csiPluginContainer,
@@ -1073,6 +1129,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					Volumes: []corev1.Volume{
 						socketDirVolume,
 						etcDirVolume,
+						shootKubeconfigVolume,
 					},
 				},
 			},

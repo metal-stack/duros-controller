@@ -44,7 +44,7 @@ const (
 
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
-	client.Client
+	Seed            client.Client
 	Shoot           client.Client
 	DiscoveryClient *discovery.DiscoveryClient
 	Log             logr.Logger
@@ -77,7 +77,7 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	// first get the metal-api projectID
 	duros := &duroscontrollerv1.Duros{}
-	if err := r.Get(ctx, req.NamespacedName, duros); err != nil {
+	if err := r.Seed.Get(ctx, req.NamespacedName, duros); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("no duros storage defined")
 			return ctrl.Result{}, nil
@@ -180,7 +180,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *duroscontr
 	}
 
 	duros.Status.ManagedResourceStatuses = []duroscontrollerv1.ManagedResourceStatus{dsStatus, stsStatus}
-	err = r.Status().Update(ctx, duros)
+	err = r.Seed.Status().Update(ctx, duros)
 	if err != nil {
 		return fmt.Errorf("error updating status: %w", err)
 	}
