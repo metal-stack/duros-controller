@@ -207,9 +207,9 @@ func main() {
 		}
 
 		creds := &duros.ByteCredentials{
-			CA:         []byte(ac),
-			Cert:       []byte(ace),
-			Key:        []byte(ak),
+			CA:         ac,
+			Cert:       ace,
+			Key:        ak,
 			ServerName: ep.Host,
 		}
 		durosConfig.ByteCredentials = creds
