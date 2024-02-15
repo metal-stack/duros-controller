@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.2.0
-	github.com/metal-stack/duros-go v0.4.5-0.20240215104658-b81d590c4e81
+	github.com/metal-stack/duros-go v0.4.5
 	github.com/metal-stack/metal-lib v0.14.4
 	github.com/metal-stack/v v1.0.3
 	go.uber.org/zap v1.26.0
