@@ -1115,7 +1115,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			obj.Parameters = map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",
-				"mgmt-endpoint": r.Endpoints.String(),
+				"mgmt-endpoint": r.Endpoints,
 				"project-name":  projectID,
 				"replica-count": strconv.Itoa(sc.ReplicaCount),
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,
