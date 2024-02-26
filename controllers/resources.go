@@ -1104,7 +1104,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		sc := scs[i]
 		annotations := map[string]string{
 			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
-			MetalClusterDescriptionTag:                    DurosDoNotEditMessage,
+			metalClusterDescriptionTag:                    durosDoNotEditMessage,
 		}
 
 		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
@@ -1164,7 +1164,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		// Snapshot Volume Class
 		snapannotations := map[string]string{
 			"snapshot.storage.kubernetes.io/is-default-class": "true",
-			MetalClusterDescriptionTag:                        DurosDoNotEditMessage,
+			metalClusterDescriptionTag:                        durosDoNotEditMessage,
 		}
 		snapobj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, snapobj, func() error {
