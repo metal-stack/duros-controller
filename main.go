@@ -18,6 +18,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"flag"
 	"os"
 	"time"
@@ -40,7 +43,7 @@ import (
 
 	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
-	duros "github.com/metal-stack/duros-go"
+	"github.com/metal-stack/duros-go"
 
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	// +kubebuilder:scaffold:imports
@@ -180,25 +183,11 @@ func main() {
 		Scheme:    duros.GRPCS,
 		Log:       l.Sugar(),
 		UserAgent: "duros-controller",
+		TLSConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
 		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
-		ac, err := os.ReadFile(apiCA)
-		if err != nil {
-			setupLog.Error(err, "unable to read api-ca from file")
-			os.Exit(1)
-		}
-		ace, err := os.ReadFile(apiCert)
-		if err != nil {
-			setupLog.Error(err, "unable to read api-cert from file")
-			os.Exit(1)
-		}
-		ak, err := os.ReadFile(apiKey)
-		if err != nil {
-			setupLog.Error(err, "unable to read api-key from file")
-			os.Exit(1)
-		}
 
 		ep, err := duros.ParseEndpoint(apiEndpoint)
 		if err != nil {
@@ -206,14 +195,14 @@ func main() {
 			os.Exit(1)
 		}
 
-		creds := &duros.ByteCredentials{
-			CA:         ac,
-			Cert:       ace,
-			Key:        ak,
-			ServerName: ep.Host,
-		}
-		durosConfig.ByteCredentials = creds
 		durosConfig.Endpoints = duros.EPs{duros.EP{Host: ep.Host, Port: ep.Port}}
+
+		tlsConfig, err := createTLSConfig(apiCA, apiCert, apiKey, ep.Host)
+		if err != nil {
+			setupLog.Error(err, "unable to create TLS configuration")
+			os.Exit(1)
+		}
+		durosConfig.TLSConfig = tlsConfig
 	}
 
 	durosClient, err := duros.Dial(ctx, durosConfig)
@@ -253,4 +242,36 @@ func main() {
 		setupLog.Error(err, "problem running duros-controller")
 		os.Exit(1)
 	}
+}
+
+func createTLSConfig(caFile string, certFile string, keyFile string, serverName string) (*tls.Config, error) {
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+	ca, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, err
+	}
+	if !certPool.AppendCertsFromPEM(ca) {
+		return nil, errors.New("failed to append api-ca cert")
+	}
+	cert, err := os.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+	key, err := os.ReadFile(keyFile)
+	if err != nil {
+		return nil, err
+	}
+	keyPair, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		return nil, err
+	}
+	return &tls.Config{
+		ServerName:   serverName,
+		Certificates: []tls.Certificate{keyPair},
+		RootCAs:      certPool,
+		MinVersion:   tls.VersionTLS12,
+	}, nil
 }
