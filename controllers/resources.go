@@ -10,7 +10,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
-	metaltag "github.com/metal-stack/metal-lib/pkg/tag"
 
 	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	apps "k8s.io/api/apps/v1"
@@ -1105,7 +1104,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		sc := scs[i]
 		annotations := map[string]string{
 			"storageclass.kubernetes.io/is-default-class": strconv.FormatBool(sc.Default),
-			metaltag.ClusterDescription:                   "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
+			MetalClusterDescriptionTag:                    DurosDoNotEditMessage,
 		}
 
 		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
@@ -1165,7 +1164,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		// Snapshot Volume Class
 		snapannotations := map[string]string{
 			"snapshot.storage.kubernetes.io/is-default-class": "true",
-			metaltag.ClusterDescription:                       "DO NOT EDIT - This resource is managed by duros-controller. Any modifications are discarded and the resource is returned to the original state.",
+			MetalClusterDescriptionTag:                        DurosDoNotEditMessage,
 		}
 		snapobj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, snapobj, func() error {
