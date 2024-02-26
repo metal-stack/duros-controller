@@ -210,12 +210,17 @@ func main() {
 			setupLog.Error(err, "unable to read api-key from file")
 			os.Exit(1)
 		}
+		serverName, _, err := net.SplitHostPort(apiEndpoint)
+		if err != nil {
+			setupLog.Error(err, "unable to parse api-endpoint")
+			os.Exit(1)
+		}
 
 		creds := &duros.ByteCredentials{
 			CA:         ac,
 			Cert:       ace,
 			Key:        ak,
-			ServerName: apiEndpoint,
+			ServerName: serverName,
 		}
 		durosConfig.ByteCredentials = creds
 	}
