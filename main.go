@@ -22,7 +22,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"flag"
+	"fmt"
+	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -91,7 +95,7 @@ func main() {
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
 
-	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates, api-ca, api-cert and api-key are required as well")
+	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api")
 	flag.StringVar(&apiCA, "api-ca", "", "The api endpoint ca")
 	flag.StringVar(&apiCert, "api-cert", "", "The api endpoint cert")
 	flag.StringVar(&apiKey, "api-key", "", "The api endpoint key")
@@ -176,28 +180,33 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := context.Background()
-	durosEPs := duros.MustParseCSV(endpoints)
+	if err := validateEndpoints(apiEndpoint); err != nil {
+		setupLog.Error(err, "unable to parse api-endpoint")
+		os.Exit(1)
+	}
+	if err := validateEndpoints(endpoints); err != nil {
+		setupLog.Error(err, "unable to parse endpoints")
+		os.Exit(1)
+	}
 	durosConfig := duros.DialConfig{
 		Token:     string(at),
-		Endpoints: durosEPs,
+		Endpoint:  apiEndpoint,
 		Scheme:    duros.GRPCS,
 		Log:       l.Sugar(),
 		UserAgent: "duros-controller",
 		TLSConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
+	if apiCA != "" && apiCert != "" && apiKey != "" {
 		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
 
-		ep, err := duros.ParseEndpoint(apiEndpoint)
+		serverName, _, err := net.SplitHostPort(apiEndpoint)
 		if err != nil {
 			setupLog.Error(err, "unable to parse api-endpoint")
 			os.Exit(1)
 		}
 
-		durosConfig.Endpoints = duros.EPs{duros.EP{Host: ep.Host, Port: ep.Port}}
-
-		tlsConfig, err := createTLSConfig(apiCA, apiCert, apiKey, ep.Host)
+		tlsConfig, err := createTLSConfig(apiCA, apiCert, apiKey, serverName)
 		if err != nil {
 			setupLog.Error(err, "unable to create TLS configuration")
 			os.Exit(1)
@@ -228,7 +237,7 @@ func main() {
 		Log:             ctrl.Log.WithName("controllers").WithName("LightBits"),
 		Namespace:       namespace,
 		DurosClient:     durosClient,
-		Endpoints:       durosEPs,
+		Endpoints:       endpoints,
 		AdminKey:        ak,
 		PSPDisabled:     pspDisabled,
 	}).SetupWithManager(mgr); err != nil {
@@ -274,4 +283,20 @@ func createTLSConfig(caFile string, certFile string, keyFile string, serverName 
 		RootCAs:      certPool,
 		MinVersion:   tls.VersionTLS12,
 	}, nil
+}
+
+func validateEndpoints(endpoints string) error {
+	for _, endpoint := range strings.Split(endpoints, ",") {
+		host, port, err := net.SplitHostPort(strings.TrimSpace(endpoint))
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(host) == "" {
+			return fmt.Errorf("invalid empty host")
+		}
+		if _, err = strconv.ParseUint(port, 10, 16); err != nil {
+			return err
+		}
+	}
+	return nil
 }
