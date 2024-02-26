@@ -861,8 +861,8 @@ github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/
 github.com/mattn/go-sqlite3 v1.14.14/go.mod h1:NyWgC/yNuGj7Q9rpYnZvas74GogHl5/Z4A/KQRfk6bU=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 h1:jWpvCLoY8Z/e3VKvlsiIGKtc+UG6U5vzxaoagmhXfyg=
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0/go.mod h1:QUyp042oQthUoa9bqDv0ER0wrtXnBruoNd7aNjkbP+k=
-github.com/metal-stack/duros-go v0.4.5 h1:7FDj26x+FwYB6QAa4FDAlKZAl8kjozqEHQl5w4+z3Nk=
-github.com/metal-stack/duros-go v0.4.5/go.mod h1:txL4ykNJfaXOnqalqkUNMZKsVnfW1a3x3sIg7njtmwI=
+github.com/metal-stack/duros-go v0.4.6-0.20240226094244-daa0a4281961 h1:Wag/lY67liCkoQMI09+E6AmFNdZufhlY3GtwWeq3uok=
+github.com/metal-stack/duros-go v0.4.6-0.20240226094244-daa0a4281961/go.mod h1:txL4ykNJfaXOnqalqkUNMZKsVnfW1a3x3sIg7njtmwI=
 github.com/metal-stack/v v1.0.3 h1:Sh2oBlnxrCUD+mVpzfC8HiqL045YWkxs0gpTvkjppqs=
 github.com/metal-stack/v v1.0.3/go.mod h1:YTahEu7/ishwpYKnp/VaW/7nf8+PInogkfGwLcGPdXg=
 github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8/go.mod h1:mC1jAcsrzbxHt8iiaC+zU4b1ylILSosueou12R++wfY=
