@@ -194,6 +194,7 @@ func main() {
 		Scheme:    duros.GRPCS,
 		Log:       l.Sugar(),
 		UserAgent: "duros-controller",
+		//nolint
 		TLSConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
