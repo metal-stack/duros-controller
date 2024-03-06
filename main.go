@@ -20,18 +20,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/go-logr/zapr"
+	"github.com/go-logr/logr"
 	v2 "github.com/metal-stack/duros-go/api/duros/v2"
 	"github.com/metal-stack/v"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -100,27 +99,21 @@ func main() {
 
 	flag.Parse()
 
-	level := zap.InfoLevel
+	level := slog.LevelInfo
 	if len(logLevel) > 0 {
-		err := level.UnmarshalText([]byte(logLevel))
+		var lvlvar slog.LevelVar
+		err := lvlvar.UnmarshalText([]byte(logLevel))
 		if err != nil {
 			setupLog.Error(err, "can't initialize zap logger")
 			os.Exit(1)
 		}
+		level = lvlvar.Level()
 	}
 
-	cfg := zap.NewProductionConfig()
-	cfg.Level = zap.NewAtomicLevelAt(level)
-	cfg.EncoderConfig.TimeKey = "timestamp"
-	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
+	l := slog.New(jsonHandler)
 
-	l, err := cfg.Build()
-	if err != nil {
-		setupLog.Error(err, "can't initialize zap logger")
-		os.Exit(1)
-	}
-
-	ctrl.SetLogger(zapr.NewLogger(l))
+	ctrl.SetLogger(logr.FromSlogHandler(jsonHandler))
 
 	restConfig := ctrl.GetConfigOrDie()
 
@@ -189,7 +182,7 @@ func main() {
 		Token:     string(at),
 		Endpoint:  apiEndpoint,
 		Scheme:    duros.GRPCS,
-		Log:       l.Sugar(),
+		Log:       l,
 		UserAgent: "duros-controller",
 	}
 
