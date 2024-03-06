@@ -157,7 +157,7 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *duroscontr
 		dsStatus.Description = fmt.Sprintf("%d/%d replicas are ready", ds.Status.NumberReady, ds.Status.DesiredNumberScheduled)
 	}
 
-	err = r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace}, sts)
+	err = r.Seed.Get(ctx, types.NamespacedName{Name: lbCSIControllerName, Namespace: r.Namespace}, sts)
 	if err != nil {
 		return fmt.Errorf("error getting statefulset: %w", err)
 	}
