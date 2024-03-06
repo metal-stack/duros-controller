@@ -908,8 +908,17 @@ func (r *DurosReconciler) reconcileStorageClassSecret(ctx context.Context, crede
 		secret = &corev1.Secret{}
 	)
 
-	key := types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace}
-	err := r.Shoot.Get(ctx, key, secret)
+	// check if exists in seed
+	key := types.NamespacedName{Name: storageClassCredentialsRef, Namespace: r.Namespace}
+	err := r.Seed.Get(ctx, key, secret)
+	if err != nil && apierrors.IsNotFound(err) {
+		log.Info("deploy storage-class-secret")
+		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
+	}
+
+	// check if exists in shoot
+	key = types.NamespacedName{Name: storageClassCredentialsRef, Namespace: namespace}
+	err = r.Shoot.Get(ctx, key, secret)
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("deploy storage-class-secret")
 		return r.deployStorageClassSecret(ctx, log, credential, adminKey)
