@@ -795,43 +795,45 @@ var (
 			},
 		},
 	}
-	shootKubeconfigVolume = corev1.Volume{
-		Name: "kubeconfig",
-		VolumeSource: corev1.VolumeSource{
-			Projected: &corev1.ProjectedVolumeSource{
-				DefaultMode: pointer.Int32(420),
-				Sources: []corev1.VolumeProjection{
-					{
-						Secret: &corev1.SecretProjection{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "generic-token-kubeconfig",
-							},
-							Items: []corev1.KeyToPath{
-								{
-									Key:  "kubeconfig",
-									Path: "kubeconfig",
+	shootKubeconfigVolume = func(csiCtrlShootAccessSecretName string) corev1.Volume {
+		return corev1.Volume{
+			Name: "kubeconfig",
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: pointer.Int32(420),
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "generic-token-kubeconfig",
 								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  "kubeconfig",
+										Path: "kubeconfig",
+									},
+								},
+								Optional: pointer.Bool(false),
 							},
-							Optional: pointer.Bool(false),
 						},
-					},
-					{
-						Secret: &corev1.SecretProjection{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "shoot-access-lb-csi-ctrl-sa", // TODO: create by GEPM and pass name of this secret
-							},
-							Items: []corev1.KeyToPath{
-								{
-									Key:  "token",
-									Path: "token",
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: csiCtrlShootAccessSecretName,
 								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  "token",
+										Path: "token",
+									},
+								},
+								Optional: pointer.Bool(false),
 							},
-							Optional: pointer.Bool(false),
 						},
 					},
 				},
 			},
-		},
+		}
 	}
 	shootKubeconfigEnvVar      = corev1.EnvVar{Name: "KUBECONFIG", Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig"}
 	shootKubeconfigVolumeMount = corev1.VolumeMount{Name: "kubeconfig", MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig", ReadOnly: true}
@@ -1128,7 +1130,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					Volumes: []corev1.Volume{
 						socketDirVolume,
 						etcDirVolume,
-						shootKubeconfigVolume,
+						shootKubeconfigVolume(r.CsiCtrlShootAccessSecretName),
 					},
 				},
 			},

@@ -60,14 +60,16 @@ func init() {
 
 func main() {
 	var (
-		logLevel             string
-		metricsAddr          string
-		enableLeaderElection bool
-		shootKubeconfig      string
-		adminToken           string
-		adminKey             string
-		endpoints            string
-		namespace            string
+		logLevel                     string
+		metricsAddr                  string
+		enableLeaderElection         bool
+		shootKubeconfig              string
+		csiCtrlShootAccessSecretName string
+
+		adminToken string
+		adminKey   string
+		endpoints  string
+		namespace  string
 		// apiEndpoint is the duros-grpc-proxy with client cert validation
 		apiEndpoint string
 		apiCA       string
@@ -84,6 +86,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&namespace, "namespace", "default", "The namespace this controller is running.")
 	flag.StringVar(&shootKubeconfig, "shoot-kubeconfig", "", "The path to the kubeconfig to talk to the shoot")
+	flag.StringVar(&csiCtrlShootAccessSecretName, "lb-csi-ctrl-shoot-access-secret-name", "", "The name of the shoot access secret for the lb-csi-controller.")
 	flag.StringVar(&adminToken, "admin-token", "/duros/admin-token", "The admin token file for the duros api.")
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
@@ -233,15 +236,16 @@ func main() {
 	}
 	setupLog.Info("connected", "duros version", version.GetApiVersion(), "cluster", cinfo.GetApiEndpoints())
 	if err = (&controllers.DurosReconciler{
-		Seed:            mgr.GetClient(),
-		Shoot:           shootClient,
-		DiscoveryClient: discoveryClient,
-		Log:             ctrl.Log.WithName("controllers").WithName("LightBits"),
-		Namespace:       namespace,
-		DurosClient:     durosClient,
-		Endpoints:       durosEPs,
-		AdminKey:        ak,
-		PSPDisabled:     pspDisabled,
+		Seed:                         mgr.GetClient(),
+		Shoot:                        shootClient,
+		DiscoveryClient:              discoveryClient,
+		Log:                          ctrl.Log.WithName("controllers").WithName("LightBits"),
+		Namespace:                    namespace,
+		DurosClient:                  durosClient,
+		Endpoints:                    durosEPs,
+		AdminKey:                     ak,
+		PSPDisabled:                  pspDisabled,
+		CsiCtrlShootAccessSecretName: csiCtrlShootAccessSecretName,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LightBits")
 		os.Exit(1)
