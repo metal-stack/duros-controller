@@ -43,16 +43,17 @@ const (
 
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
-	Seed                         client.Client
-	Shoot                        client.Client
-	DiscoveryClient              *discovery.DiscoveryClient
-	Log                          logr.Logger
-	Namespace                    string
-	DurosClient                  durosv2.DurosAPIClient
-	Endpoints                    string
-	AdminKey                     []byte
-	PSPDisabled                  bool
-	CsiCtrlShootAccessSecretName string
+	Seed                               client.Client
+	Shoot                              client.Client
+	DiscoveryClient                    *discovery.DiscoveryClient
+	Log                                logr.Logger
+	Namespace                          string
+	DurosClient                        durosv2.DurosAPIClient
+	Endpoints                          string
+	AdminKey                           []byte
+	PSPDisabled                        bool
+	CsiCtrlShootAccessSecretName       string
+	CsiCtrlGenericKubeconfigSecretName string
 }
 
 // Reconcile the Duros CRD

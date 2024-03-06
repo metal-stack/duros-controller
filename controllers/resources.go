@@ -795,7 +795,7 @@ var (
 			},
 		},
 	}
-	shootKubeconfigVolume = func(csiCtrlShootAccessSecretName string) corev1.Volume {
+	shootKubeconfigVolume = func(csiCtrlShootAccessSecretName, csiCtrlGenericKubeconfigSecretName string) corev1.Volume {
 		return corev1.Volume{
 			Name: "kubeconfig",
 			VolumeSource: corev1.VolumeSource{
@@ -805,7 +805,7 @@ var (
 						{
 							Secret: &corev1.SecretProjection{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: "generic-token-kubeconfig",
+									Name: csiCtrlGenericKubeconfigSecretName,
 								},
 								Items: []corev1.KeyToPath{
 									{
@@ -1142,7 +1142,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					Volumes: []corev1.Volume{
 						socketDirVolume,
 						etcDirVolume,
-						shootKubeconfigVolume(r.CsiCtrlShootAccessSecretName),
+						shootKubeconfigVolume(r.CsiCtrlShootAccessSecretName, r.CsiCtrlGenericKubeconfigSecretName),
 					},
 				},
 			},
