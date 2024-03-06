@@ -128,7 +128,7 @@ var (
 	}
 	serviceAccounts = func() []corev1.ServiceAccount {
 		return []corev1.ServiceAccount{
-			// ctrlServiceAccount() this one gets created by Gardener
+			ctrlServiceAccount(),
 			nodeServiceAccount(),
 		}
 	}
