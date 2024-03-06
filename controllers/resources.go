@@ -1142,6 +1142,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Seed, sts, func() error {
 		controllerRoleLabels := map[string]string{
+			"app":  "lb-csi-plugin",
+			"role": "controller",
+		}
+		podLabels := map[string]string{
 			"app":                              "lb-csi-plugin",
 			"role":                             "controller",
 			"networking.gardener.cloud/to-dns": "allowed",
@@ -1168,7 +1172,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			ServiceName: "lb-csi-ctrl-svc",
 			Replicas:    pointer.Int32(1),
 			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
+				ObjectMeta: metav1.ObjectMeta{Labels: podLabels},
 				Spec: corev1.PodSpec{
 					Containers:        containers,
 					PriorityClassName: "system-cluster-critical",
