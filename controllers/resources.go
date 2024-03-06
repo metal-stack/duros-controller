@@ -112,7 +112,7 @@ var (
 	ctrlServiceAccount = func() corev1.ServiceAccount {
 		return corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "lb-csi-ctrl-sa",
+				Name:      "lb-csi-controller",
 				Namespace: namespace,
 			},
 		}
@@ -128,7 +128,7 @@ var (
 	}
 	serviceAccounts = func() []corev1.ServiceAccount {
 		return []corev1.ServiceAccount{
-			ctrlServiceAccount(),
+			// ctrlServiceAccount() this one gets created by Gardener
 			nodeServiceAccount(),
 		}
 	}
