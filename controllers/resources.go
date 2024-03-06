@@ -1094,7 +1094,20 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		log.Info("clusterrolebindinding", "name", crb.Name, "operation", op)
 	}
 
+	// cleanup stateful set in shoot as a migration step to deployment to seed
+	// this can be removed in a future version
 	sts := &apps.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lbCSIControllerName,
+			Namespace: namespace,
+		},
+	}
+	err = r.Shoot.Delete(ctx, sts)
+	if client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	sts = &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSIControllerName,
 			Namespace: r.Namespace,
@@ -1174,7 +1187,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			obj.Parameters = map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",
-				"mgmt-endpoint": r.Endpoints.String(),
+				"mgmt-endpoint": r.Endpoints,
 				"project-name":  projectID,
 				"replica-count": strconv.Itoa(sc.ReplicaCount),
 				"csi.storage.k8s.io/controller-expand-secret-name":       storageClassCredentialsRef,

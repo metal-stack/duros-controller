@@ -19,15 +19,18 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"log/slog"
+	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/go-logr/zapr"
+	"github.com/go-logr/logr"
 	v2 "github.com/metal-stack/duros-go/api/duros/v2"
 	"github.com/metal-stack/v"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +43,7 @@ import (
 
 	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
-	duros "github.com/metal-stack/duros-go"
+	"github.com/metal-stack/duros-go"
 
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 	// +kubebuilder:scaffold:imports
@@ -91,7 +94,7 @@ func main() {
 	flag.StringVar(&adminKey, "admin-key", "/duros/admin-key", "The admin key file for the duros api.")
 	flag.StringVar(&endpoints, "endpoints", "", "The endpoints, in the form host:port,host:port of the duros api.")
 
-	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api, secured with ca certificates, api-ca, api-cert and api-key are required as well")
+	flag.StringVar(&apiEndpoint, "api-endpoint", "", "The api endpoint, in the form host:port of the duros api")
 	flag.StringVar(&apiCA, "api-ca", "", "The api endpoint ca")
 	flag.StringVar(&apiCert, "api-cert", "", "The api endpoint cert")
 	flag.StringVar(&apiKey, "api-key", "", "The api endpoint key")
@@ -99,27 +102,21 @@ func main() {
 
 	flag.Parse()
 
-	level := zap.InfoLevel
+	level := slog.LevelInfo
 	if len(logLevel) > 0 {
-		err := level.UnmarshalText([]byte(logLevel))
+		var lvlvar slog.LevelVar
+		err := lvlvar.UnmarshalText([]byte(logLevel))
 		if err != nil {
 			setupLog.Error(err, "can't initialize zap logger")
 			os.Exit(1)
 		}
+		level = lvlvar.Level()
 	}
 
-	cfg := zap.NewProductionConfig()
-	cfg.Level = zap.NewAtomicLevelAt(level)
-	cfg.EncoderConfig.TimeKey = "timestamp"
-	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
+	l := slog.New(jsonHandler)
 
-	l, err := cfg.Build()
-	if err != nil {
-		setupLog.Error(err, "can't initialize zap logger")
-		os.Exit(1)
-	}
-
-	ctrl.SetLogger(zapr.NewLogger(l))
+	ctrl.SetLogger(logr.FromSlogHandler(jsonHandler))
 
 	restConfig := ctrl.GetConfigOrDie()
 
@@ -176,16 +173,23 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := context.Background()
-	durosEPs := duros.MustParseCSV(endpoints)
+	if err := validateEndpoints(apiEndpoint); err != nil {
+		setupLog.Error(err, "unable to parse api-endpoint")
+		os.Exit(1)
+	}
+	if err := validateEndpoints(endpoints); err != nil {
+		setupLog.Error(err, "unable to parse endpoints")
+		os.Exit(1)
+	}
 	durosConfig := duros.DialConfig{
 		Token:     string(at),
-		Endpoints: durosEPs,
+		Endpoint:  apiEndpoint,
 		Scheme:    duros.GRPCS,
-		Log:       l.Sugar(),
+		Log:       l,
 		UserAgent: "duros-controller",
 	}
 
-	if apiEndpoint != "" && apiCA != "" && apiCert != "" && apiKey != "" {
+	if apiCA != "" && apiCert != "" && apiKey != "" {
 		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
 		ac, err := os.ReadFile(apiCA)
 		if err != nil {
@@ -202,8 +206,7 @@ func main() {
 			setupLog.Error(err, "unable to read api-key from file")
 			os.Exit(1)
 		}
-
-		ep, err := duros.ParseEndpoint(apiEndpoint)
+		serverName, _, err := net.SplitHostPort(apiEndpoint)
 		if err != nil {
 			setupLog.Error(err, "unable to parse api-endpoint")
 			os.Exit(1)
@@ -213,10 +216,9 @@ func main() {
 			CA:         ac,
 			Cert:       ace,
 			Key:        ak,
-			ServerName: ep.Host,
+			ServerName: serverName,
 		}
 		durosConfig.ByteCredentials = creds
-		durosConfig.Endpoints = duros.EPs{duros.EP{Host: ep.Host, Port: ep.Port}}
 	}
 
 	durosClient, err := duros.Dial(ctx, durosConfig)
@@ -242,7 +244,7 @@ func main() {
 		Log:                          ctrl.Log.WithName("controllers").WithName("LightBits"),
 		Namespace:                    namespace,
 		DurosClient:                  durosClient,
-		Endpoints:                    durosEPs,
+		Endpoints:                    endpoints,
 		AdminKey:                     ak,
 		PSPDisabled:                  pspDisabled,
 		CsiCtrlShootAccessSecretName: csiCtrlShootAccessSecretName,
@@ -257,4 +259,20 @@ func main() {
 		setupLog.Error(err, "problem running duros-controller")
 		os.Exit(1)
 	}
+}
+
+func validateEndpoints(endpoints string) error {
+	for _, endpoint := range strings.Split(endpoints, ",") {
+		host, port, err := net.SplitHostPort(strings.TrimSpace(endpoint))
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(host) == "" {
+			return fmt.Errorf("invalid empty host")
+		}
+		if _, err = strconv.ParseUint(port, 10, 16); err != nil {
+			return err
+		}
+	}
+	return nil
 }

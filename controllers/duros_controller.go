@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
 	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
@@ -50,7 +49,7 @@ type DurosReconciler struct {
 	Log                          logr.Logger
 	Namespace                    string
 	DurosClient                  durosv2.DurosAPIClient
-	Endpoints                    duros.EPs
+	Endpoints                    string
 	AdminKey                     []byte
 	PSPDisabled                  bool
 	CsiCtrlShootAccessSecretName string
