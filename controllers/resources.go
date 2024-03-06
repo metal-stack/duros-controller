@@ -1137,9 +1137,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
 				Spec: corev1.PodSpec{
-					Containers:         containers,
-					ServiceAccountName: ctrlServiceAccount().Name,
-					PriorityClassName:  "system-cluster-critical",
+					Containers:        containers,
+					PriorityClassName: "system-cluster-critical",
 					Volumes: []corev1.Volume{
 						socketDirVolume,
 						etcDirVolume,
