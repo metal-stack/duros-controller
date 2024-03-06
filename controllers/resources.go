@@ -597,9 +597,12 @@ var (
 		Name:            "csi-attacher",
 		Image:           csiAttacherImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args:            []string{"--csi-address=$(ADDRESS)", "--v=5"},
+		Args: []string{
+			"--csi-address=$(ADDRESS)",
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--v=5",
+		},
 		Env: []corev1.EnvVar{
-			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -612,7 +615,11 @@ var (
 		Name:            "csi-resizer",
 		Image:           csiResizerImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args:            []string{"--csi-address=$(ADDRESS)", "--v=4"},
+		Args: []string{
+			"--csi-address=$(ADDRESS)",
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--v=4",
+		},
 		Env: []corev1.EnvVar{
 			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
@@ -627,9 +634,10 @@ var (
 		Name:            "snapshot-controller",
 		Image:           snapshotControllerImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args:            []string{"--leader-election=false", "--v=5"},
-		Env: []corev1.EnvVar{
-			shootKubeconfigEnvVar,
+		Args: []string{
+			"--leader-election=false",
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--v=5",
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			shootKubeconfigVolumeMount,
@@ -640,9 +648,12 @@ var (
 		Name:            "csi-snapshotter",
 		Image:           csiSnapshotterImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Args:            []string{"--csi-address=$(ADDRESS)", "--leader-election=false", "--v=5"},
+		Args: []string{
+			"--csi-address=$(ADDRESS)",
+			"--leader-election=false",
+			"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+			"--v=5"},
 		Env: []corev1.EnvVar{
-			shootKubeconfigEnvVar,
 			{Name: "ADDRESS", Value: "/var/lib/csi/sockets/pluginproxy/csi.sock"},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -1123,18 +1134,12 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	// cleanup stateful set in shoot as a migration step to deployment to seed
 	// this can be removed in a future version
-	sts := &apps.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      lbCSIControllerName,
-			Namespace: namespace,
-		},
-	}
-	err = r.Shoot.Delete(ctx, sts)
-	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("unable to cleanup lb-csi-controller stateful set in shoot: %w", err)
+	err = r.migrationCleanup(ctx)
+	if err != nil {
+		return err
 	}
 
-	sts = &apps.StatefulSet{
+	sts := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSIControllerName,
 			Namespace: r.Namespace,
@@ -1327,4 +1332,33 @@ func (r *DurosReconciler) deleteResourceWithWait(ctx context.Context, log logr.L
 
 		return false, err
 	})
+}
+
+func (r *DurosReconciler) migrationCleanup(ctx context.Context) error {
+	// cleanup stateful set in shoot as a migration step to deployment to seed
+	// this can be removed in a future version
+
+	sts := &apps.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      lbCSIControllerName,
+			Namespace: namespace,
+		},
+	}
+	err := r.Shoot.Delete(ctx, sts)
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("unable to cleanup lb-csi-controller stateful set in shoot: %w", err)
+	}
+
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lb-csi-ctrl-sa",
+			Namespace: namespace,
+		},
+	}
+	err = r.Shoot.Delete(ctx, sa)
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("unable to cleanup old lb-csi-controller service account in shoot: %w", err)
+	}
+
+	return nil
 }
