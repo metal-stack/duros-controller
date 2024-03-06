@@ -1104,7 +1104,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	}
 	err = r.Shoot.Delete(ctx, sts)
 	if client.IgnoreNotFound(err) != nil {
-		return err
+		return fmt.Errorf("unable to cleanup lb-csi-controller stateful set in shoot: %w", err)
 	}
 
 	sts = &apps.StatefulSet{
