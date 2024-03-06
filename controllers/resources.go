@@ -969,10 +969,10 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, log logr
 	}
 
 	storageClassSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: storageClassCredentialsRef, Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: storageClassCredentialsRef, Namespace: r.Namespace},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassSecret, func() error {
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Seed, &storageClassSecret, func() error {
 		storageClassSecret.Type = "kubernetes.io/lb-csi"
 		storageClassSecret.Data = map[string][]byte{
 			"jwt": []byte(token),
@@ -984,7 +984,25 @@ func (r *DurosReconciler) deployStorageClassSecret(ctx context.Context, log logr
 		return err
 	}
 
-	log.Info("storageclasssecret", "name", storageClassCredentialsRef, "operation", op)
+	log.Info("storageclasssecret seed", "name", storageClassCredentialsRef, "operation", op)
+
+	storageClassSecret = corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: storageClassCredentialsRef, Namespace: namespace},
+	}
+
+	op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, &storageClassSecret, func() error {
+		storageClassSecret.Type = "kubernetes.io/lb-csi"
+		storageClassSecret.Data = map[string][]byte{
+			"jwt": []byte(token),
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	log.Info("storageclasssecret shoot", "name", storageClassCredentialsRef, "operation", op)
 
 	return nil
 }
