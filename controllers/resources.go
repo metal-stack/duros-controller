@@ -1097,7 +1097,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	sts := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      lbCSIControllerName,
-			Namespace: namespace,
+			Namespace: r.Namespace,
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Seed, sts, func() error {
