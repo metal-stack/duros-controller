@@ -1043,7 +1043,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
+		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller", "gardener.cloud/role": "system-component"}
 		containers := []corev1.Container{
 			csiPluginContainer,
 			csiProvisionerContainer,
@@ -1090,6 +1090,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			// cannot be used as we don't have a deletion flow
 			// https://github.com/metal-stack/duros-controller/pull/28
 			// "shoot.gardener.cloud/no-cleanup":        "true",
+			"gardener.cloud/role":                    "system-component",
 			"node.gardener.cloud/critical-component": "true",
 		}
 		ds.Spec = csiNodeDaemonSet.Spec
