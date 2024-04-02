@@ -803,6 +803,7 @@ var (
 						"app":                                    lbCSINodeName,
 						"role":                                   "node",
 						"node.gardener.cloud/critical-component": "true",
+						"gardener.cloud/role":                    "system-component",
 					},
 					Annotations: map[string]string{"node.gardener.cloud/wait-for-csi-node-lightbits": provisioner},
 				},
@@ -1090,7 +1091,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			// cannot be used as we don't have a deletion flow
 			// https://github.com/metal-stack/duros-controller/pull/28
 			// "shoot.gardener.cloud/no-cleanup":        "true",
-			"gardener.cloud/role":                    "system-component",
 			"node.gardener.cloud/critical-component": "true",
 		}
 		ds.Spec = csiNodeDaemonSet.Spec
