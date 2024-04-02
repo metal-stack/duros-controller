@@ -803,6 +803,7 @@ var (
 						"app":                                    lbCSINodeName,
 						"role":                                   "node",
 						"node.gardener.cloud/critical-component": "true",
+						"gardener.cloud/role":                    "system-component",
 					},
 					Annotations: map[string]string{"node.gardener.cloud/wait-for-csi-node-lightbits": provisioner},
 				},
@@ -1043,7 +1044,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller"}
+		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller", "gardener.cloud/role": "system-component"}
 		containers := []corev1.Container{
 			csiPluginContainer,
 			csiProvisionerContainer,
