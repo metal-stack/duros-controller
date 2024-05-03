@@ -1082,7 +1082,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	})
 
 	if err != nil {
-		if apierrors.IsForbidden(err) && strings.Contains(err.Error(), "updates to statefulset spec for fields other than") {
+		if apierrors.IsInvalid(err) && strings.Contains(err.Error(), "updates to statefulset spec for fields other than") {
 			// this means the stateful set needs recreation (for instance labels were modified), let's delete it
 			deleteErr := r.Shoot.Delete(ctx, sts)
 			if deleteErr != nil {
