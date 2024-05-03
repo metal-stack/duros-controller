@@ -16,6 +16,9 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 
 all: manager
 
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
 # clean generated code
 .PHONY: clean
 clean:
