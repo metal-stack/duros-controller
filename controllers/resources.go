@@ -1087,9 +1087,11 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 			if deleteErr != nil {
 				return fmt.Errorf("error deleting stateful set: %w", deleteErr)
 			}
+
+			log.Info("recreated stateful set", "name", sts.Name)
 		}
 
-		return err
+		return fmt.Errorf("error creating or updating statefulset: %w", err)
 	}
 
 	log.Info("statefulset", "name", sts.Name, "operation", op)
