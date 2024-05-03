@@ -1082,13 +1082,13 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 	if err != nil {
 		if apierrors.IsInvalid(err) {
-			// this means the stateful set needs recreation (for instance labels were modified), let's delete it
+			// this means the statefulset needs recreation (for instance labels were modified), let's delete it
 			deleteErr := r.Shoot.Delete(ctx, sts)
 			if deleteErr != nil {
-				return fmt.Errorf("error deleting stateful set: %w", deleteErr)
+				return fmt.Errorf("error deleting statefulset: %w", deleteErr)
 			}
 
-			log.Info("recreated stateful set", "name", sts.Name)
+			log.Info("recreated statefulset", "name", sts.Name)
 		}
 
 		return fmt.Errorf("error creating or updating statefulset: %w", err)
