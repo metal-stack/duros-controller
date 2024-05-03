@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -1082,7 +1081,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 	})
 
 	if err != nil {
-		if apierrors.IsInvalid(err) && strings.Contains(err.Error(), "updates to statefulset spec for fields other than") {
+		if apierrors.IsInvalid(err) {
 			// this means the stateful set needs recreation (for instance labels were modified), let's delete it
 			deleteErr := r.Shoot.Delete(ctx, sts)
 			if deleteErr != nil {
