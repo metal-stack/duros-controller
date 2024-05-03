@@ -10,14 +10,14 @@ GITVERSION := $(shell git describe --long --all)
 BUILDDATE := $(shell date -Iseconds)
 VERSION := $(or ${VERSION},devel)
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
+LOCALBIN ?= $(shell pwd)/bin
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 
 all: manager
+
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
 # clean generated code
 .PHONY: clean
@@ -26,7 +26,7 @@ clean:
 
 # Run tests
 test: generate fmt vet manifests
-	go test ./... -coverprofile cover.out -race -timeout 30s
+	CGO_ENABLED=1 go test ./... -coverprofile cover.out -race -timeout 30s
 
 # Build manager binary
 manager: generate fmt vet
@@ -78,22 +78,11 @@ docker-build: test
 docker-push:
 	docker push ${IMG}
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN)
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: certs
 certs:

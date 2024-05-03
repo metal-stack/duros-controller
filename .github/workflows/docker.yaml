@@ -38,7 +38,7 @@ jobs:
         cache: false
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v4
+      uses: golangci/golangci-lint-action@v5
       with:
         args: --build-tags integration -p bugs -p unused --timeout=5m
 
@@ -48,7 +48,12 @@ jobs:
         [ "${GITHUB_EVENT_NAME}" == 'release' ] && echo "tag=${GITHUB_REF##*/}" >> $GITHUB_ENV || true
         [ "${GITHUB_EVENT_NAME}" == 'push' ] && echo "tag=latest" >> $GITHUB_ENV || true
 
-    - name: Build and push image
+    - name: Test and build
+      run: |
+        make test
+        make
+
+    - name: Push image
       uses: docker/build-push-action@v5
       with:
         context: .
