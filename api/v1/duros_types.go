@@ -55,6 +55,8 @@ type DurosSpec struct {
 
 // DurosStatus defines the observed state of Duros
 type DurosStatus struct {
+	// ReconcileStatus describes the current status of the reconciliation
+	ReconcileStatus ReconcileStatus `json:"reconcileStatus" description:"The current status of the reconciliation of this resource"`
 	// ManagedResourceStatuses contains a list of statuses of resources managed by this controller
 	ManagedResourceStatuses []ManagedResourceStatus `json:"managedResourceStatuses" description:"A list of managed resource statuses"`
 }
@@ -70,6 +72,13 @@ type ManagedResourceStatus struct {
 	Description string `json:"description" description:"The description of the state of this component"`
 	// LastUpdateTime is the last time the status was updated
 	LastUpdateTime metav1.Time `json:"lastUpdateTime" description:"The time when this status was last updated"`
+}
+
+type ReconcileStatus struct {
+	// LastReconcile is the point in time when the last reconciliation took place
+	LastReconcile *metav1.Time `json:"lastReconcile,omitempty" description:"Timestamp of last reconciliation"`
+	// Error indicates a reconciliation error that occurred, it's empty when there is no error
+	Error *string `json:"error,omitempty" description:"If set describes that there is an error during reconciliation"`
 }
 
 // HealthState describes the state of a managed resource

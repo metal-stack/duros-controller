@@ -89,10 +89,36 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, nil
 	}
 
-	err := validateDuros(duros)
+	var err error
+
+	defer func() {
+		now := metav1.NewTime(time.Now())
+
+		duros.Status.ReconcileStatus = duroscontrollerv1.ReconcileStatus{
+			LastReconcile: &now,
+			Error:         nil,
+		}
+
+		if err != nil {
+			msg := err.Error()
+			duros.Status.ReconcileStatus.Error = &msg
+		}
+
+		r.setManagedResourceStatus(ctx, duros)
+
+		if err := r.Status().Update(ctx, duros); err != nil {
+			log.Error(err, "error updating status of duros resource", "name", duros.Name)
+			return
+		}
+
+		r.Log.Info("status updated", "name", duros.Name)
+	}()
+
+	err = validateDuros(duros)
 	if err != nil {
 		return requeue, err
 	}
+
 	projectID := duros.Spec.MetalProjectID
 	storageClasses := duros.Spec.StorageClasses
 
@@ -118,11 +144,6 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return requeue, err
 	}
 
-	err = r.reconcileStatus(ctx, duros)
-	if err != nil {
-		return requeue, err
-	}
-
 	return ctrl.Result{
 		// we requeue in a small interval to ensure resources are recreated quickly
 		// and status is updated regularly
@@ -130,23 +151,31 @@ func (r *DurosReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}, nil
 }
 
-func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *duroscontrollerv1.Duros) error {
+func (r *DurosReconciler) setManagedResourceStatus(ctx context.Context, duros *duroscontrollerv1.Duros) {
 	var (
 		updateTime = metav1.NewTime(time.Now())
 		ds         = &appsv1.DaemonSet{}
 		sts        = &appsv1.StatefulSet{}
+
+		dsState = duroscontrollerv1.HealthStateRunning
+		dsMsg   = "All replicas are ready"
+
+		stsState = duroscontrollerv1.HealthStateRunning
+		stsMsg   = "All replicas are ready"
 	)
 
 	err := r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSINodeName, Namespace: namespace}, ds)
 	if err != nil {
-		return fmt.Errorf("error getting daemon set: %w", err)
+		r.Log.Error(err, "error getting daemon set")
+		dsState = duroscontrollerv1.HealthStateNotRunning
+		dsMsg = err.Error()
 	}
 
 	dsStatus := duroscontrollerv1.ManagedResourceStatus{
 		Name:           ds.Name,
 		Group:          "DaemonSet", // ds.GetObjectKind().GroupVersionKind().String() --> this does not work :(
-		State:          duroscontrollerv1.HealthStateRunning,
-		Description:    "All replicas are ready",
+		State:          dsState,
+		Description:    dsMsg,
 		LastUpdateTime: updateTime,
 	}
 
@@ -157,14 +186,16 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *duroscontr
 
 	err = r.Shoot.Get(ctx, types.NamespacedName{Name: lbCSIControllerName, Namespace: namespace}, sts)
 	if err != nil {
-		return fmt.Errorf("error getting statefulset: %w", err)
+		r.Log.Error(err, "error getting stateful set")
+		stsState = duroscontrollerv1.HealthStateNotRunning
+		stsMsg = err.Error()
 	}
 
 	stsStatus := duroscontrollerv1.ManagedResourceStatus{
 		Name:           sts.Name,
 		Group:          "StatefulSet", // sts.GetObjectKind().GroupVersionKind().String() --> this does not work :(
-		State:          duroscontrollerv1.HealthStateRunning,
-		Description:    "All replicas are ready",
+		State:          stsState,
+		Description:    stsMsg,
 		LastUpdateTime: updateTime,
 	}
 
@@ -179,14 +210,6 @@ func (r *DurosReconciler) reconcileStatus(ctx context.Context, duros *duroscontr
 	}
 
 	duros.Status.ManagedResourceStatuses = []duroscontrollerv1.ManagedResourceStatus{dsStatus, stsStatus}
-	err = r.Status().Update(ctx, duros)
-	if err != nil {
-		return fmt.Errorf("error updating status: %w", err)
-	}
-
-	r.Log.Info("status updated", "name", duros.Name)
-
-	return nil
 }
 
 // SetupWithManager boilerplate to setup the Reconciler
