@@ -5,3 +5,5 @@ api/durosv2/*
 bin/
 **/*/statik.go
 .vscode
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out

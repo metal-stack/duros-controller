@@ -109,8 +109,22 @@ spec:
                   - state
                   type: object
                 type: array
+              reconcileStatus:
+                description: ReconcileStatus describes the current status of the reconciliation
+                properties:
+                  error:
+                    description: Error indicates a reconciliation error that occurred,
+                      it's empty when there is no error
+                    type: string
+                  lastReconcile:
+                    description: LastReconcile is the point in time when the last
+                      reconciliation took place
+                    format: date-time
+                    type: string
+                type: object
             required:
             - managedResourceStatuses
+            - reconcileStatus
             type: object
         type: object
     served: true
