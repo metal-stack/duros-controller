@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.2.0
-	github.com/metal-stack/duros-go v0.4.7
+	github.com/metal-stack/duros-go v0.4.8-0.20240306112347-983d661de012
 	github.com/metal-stack/v v1.0.3
 	google.golang.org/grpc v1.63.2
 	k8s.io/api v0.26.10

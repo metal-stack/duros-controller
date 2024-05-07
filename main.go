@@ -18,6 +18,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -178,44 +181,20 @@ func main() {
 		setupLog.Error(err, "unable to parse endpoints")
 		os.Exit(1)
 	}
+
+	tlsConfig, err := createTLSConfig(apiCA, apiCert, apiKey, apiEndpoint)
+	if err != nil {
+		setupLog.Error(err, "unable to create TLS configuration")
+		os.Exit(1)
+	}
+
 	durosConfig := duros.DialConfig{
 		Token:     string(at),
 		Endpoint:  apiEndpoint,
 		Scheme:    duros.GRPCS,
 		Log:       l,
 		UserAgent: "duros-controller",
-	}
-
-	if apiCA != "" && apiCert != "" && apiKey != "" {
-		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
-		ac, err := os.ReadFile(apiCA)
-		if err != nil {
-			setupLog.Error(err, "unable to read api-ca from file")
-			os.Exit(1)
-		}
-		ace, err := os.ReadFile(apiCert)
-		if err != nil {
-			setupLog.Error(err, "unable to read api-cert from file")
-			os.Exit(1)
-		}
-		ak, err := os.ReadFile(apiKey)
-		if err != nil {
-			setupLog.Error(err, "unable to read api-key from file")
-			os.Exit(1)
-		}
-		serverName, _, err := net.SplitHostPort(apiEndpoint)
-		if err != nil {
-			setupLog.Error(err, "unable to parse api-endpoint")
-			os.Exit(1)
-		}
-
-		creds := &duros.ByteCredentials{
-			CA:         ac,
-			Cert:       ace,
-			Key:        ak,
-			ServerName: serverName,
-		}
-		durosConfig.ByteCredentials = creds
+		TLSConfig: tlsConfig,
 	}
 
 	durosClient, err := duros.Dial(ctx, durosConfig)
@@ -271,4 +250,51 @@ func validateEndpoints(endpoints string) error {
 		}
 	}
 	return nil
+}
+
+func createTLSConfig(caFile string, certFile string, keyFile string, apiEndpoint string) (*tls.Config, error) {
+	serverName, _, err := net.SplitHostPort(apiEndpoint)
+	if err != nil {
+		setupLog.Error(err, "unable to parse api-endpoint")
+		os.Exit(1)
+	}
+
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		ServerName: serverName,
+	}
+
+	if caFile != "" {
+		certPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, err
+		}
+		ca, err := os.ReadFile(caFile)
+		if err != nil {
+			return nil, err
+		}
+		if !certPool.AppendCertsFromPEM(ca) {
+			return nil, errors.New("failed to append api-ca cert")
+		}
+		tlsConfig.RootCAs = certPool
+	}
+
+	if certFile != "" && keyFile != "" {
+		setupLog.Info("connecting to api with client cert", "api-endpoint", apiEndpoint)
+		cert, err := os.ReadFile(certFile)
+		if err != nil {
+			return nil, err
+		}
+		key, err := os.ReadFile(keyFile)
+		if err != nil {
+			return nil, err
+		}
+		keyPair, err := tls.X509KeyPair(cert, key)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{keyPair}
+	}
+
+	return tlsConfig, nil
 }
