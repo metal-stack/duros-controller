@@ -93,11 +93,12 @@ const (
 
 // StorageClass defines the storageClass parameters
 type StorageClass struct {
-	Name         string `json:"name"`
-	ReplicaCount int    `json:"replicas"`
-	Compression  bool   `json:"compression"`
-	Default      bool   `json:"default" description:"if set to true this storageclass is configured as default"`
-	Encryption   bool   `json:"encryption,omitempty"`
+	Name          string `json:"name"`
+	ReplicaCount  int    `json:"replicas"`
+	Compression   bool   `json:"compression"`
+	Default       bool   `json:"default" description:"if set to true this storageclass is configured as default"`
+	Encryption    bool   `json:"encryption,omitempty"`
+	QoSPolicyName string `json:"qosPolicyName,omitempty"`
 }
 
 func init() {
