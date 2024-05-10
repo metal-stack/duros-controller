@@ -1134,6 +1134,10 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 				obj.Parameters["compression"] = "enabled"
 			}
 
+			if sc.QoSPolicyName != "" {
+				obj.Parameters["qos-policy-name"] = sc.QoSPolicyName
+			}
+
 			if sc.Encryption {
 				secretName := "storage-encryption-key"
 				//nolint:gosec
