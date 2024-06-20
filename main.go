@@ -195,7 +195,7 @@ func main() {
 		Endpoint:  apiEndpoint,
 		Scheme:    duros.GRPCS,
 		Log:       l,
-		UserAgent: "duros-controller",
+		UserAgent: "duros-controller:" + v.V.String(),
 	}
 
 	if apiCA != "" && apiCert != "" && apiKey != "" {
@@ -262,7 +262,7 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("starting duros-controller", "version", v.V)
+	setupLog.Info("starting duros-controller", "version", v.V.String())
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running duros-controller")
 		os.Exit(1)
