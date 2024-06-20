@@ -40,6 +40,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
@@ -119,12 +120,13 @@ func main() {
 
 	disabledTimeout := time.Duration(-1) // wait for all runnables to finish before dying
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                  scheme,
-		MetricsBindAddress:      metricsAddr,
-		Port:                    9443,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        "duros-controller-leader-election",
-		Namespace:               namespace,
+		LeaderElectionNamespace: namespace,
 		GracefulShutdownTimeout: &disabledTimeout,
 	})
 	if err != nil {
@@ -218,7 +220,7 @@ func main() {
 		durosConfig.ByteCredentials = creds
 	}
 
-	durosClient, err := duros.Dial(ctx, durosConfig)
+	durosClient, err := duros.Dial(durosConfig)
 	if err != nil {
 		setupLog.Error(err, "problem running duros-controller")
 		os.Exit(1)
