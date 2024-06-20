@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/go-logr/logr"
@@ -134,11 +133,10 @@ func main() {
 		LeaderElectionID:        "duros-controller-leader-election",
 		GracefulShutdownTimeout: &disabledTimeout,
 		// Restrict this manager to a namespace
-		NewCache: func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
-			opts.DefaultNamespaces = map[string]cache.Config{
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
 				namespace: {},
-			}
-			return cache.New(config, opts)
+			},
 		},
 	})
 	if err != nil {
