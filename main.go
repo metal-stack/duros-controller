@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/go-logr/logr"
@@ -39,6 +40,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -131,6 +133,13 @@ func main() {
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        "duros-controller-leader-election",
 		GracefulShutdownTimeout: &disabledTimeout,
+		// Restrict this manager to a namespace
+		NewCache: func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			opts.DefaultNamespaces = map[string]cache.Config{
+				namespace: {},
+			}
+			return cache.New(config, opts)
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start duros-controller")
