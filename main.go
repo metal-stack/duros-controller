@@ -195,7 +195,7 @@ func main() {
 		Endpoint:  apiEndpoint,
 		Scheme:    duros.GRPCS,
 		Log:       l,
-		UserAgent: "duros-controller:" + v.V.String(),
+		UserAgent: "duros-controller:" + v.Version,
 	}
 
 	if apiCA != "" && apiCert != "" && apiKey != "" {
