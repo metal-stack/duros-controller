@@ -41,6 +41,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	duroscontrollerv1 "github.com/metal-stack/duros-controller/api/v1"
 	"github.com/metal-stack/duros-controller/controllers"
@@ -124,9 +125,11 @@ func main() {
 		Metrics: server.Options{
 			BindAddress: metricsAddr,
 		},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		LeaderElection:          enableLeaderElection,
 		LeaderElectionID:        "duros-controller-leader-election",
-		LeaderElectionNamespace: namespace,
 		GracefulShutdownTimeout: &disabledTimeout,
 	})
 	if err != nil {
