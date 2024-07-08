@@ -51,6 +51,8 @@ type DurosSpec struct {
 	MetalProjectID string `json:"metalProjectID,omitempty"`
 	// StorageClasses defines what storageclasses should be deployed
 	StorageClasses []StorageClass `json:"storageClasses,omitempty"`
+	// QoSPolicies defines which lightbits quality of service policies should be deployed
+	QoSPolicies []QoSPolicy `json:"qosPolicies,omitempty"`
 }
 
 // DurosStatus defines the observed state of Duros
@@ -91,15 +93,47 @@ const (
 	HealthStateNotRunning HealthState = "Not Running"
 )
 
-// StorageClass defines the storageClass parameters
-type StorageClass struct {
-	Name          string `json:"name"`
-	ReplicaCount  int    `json:"replicas"`
-	Compression   bool   `json:"compression"`
-	Default       bool   `json:"default" description:"if set to true this storageclass is configured as default"`
-	Encryption    bool   `json:"encryption,omitempty"`
-	QoSPolicyName string `json:"qosPolicyName,omitempty"`
-}
+type (
+	StorageClass struct {
+		Name          string `json:"name"`
+		ReplicaCount  int    `json:"replicas"`
+		Compression   bool   `json:"compression"`
+		Default       bool   `json:"default" description:"if set to true this storageclass is configured as default"`
+		Encryption    bool   `json:"encryption,omitempty"`
+		QoSPolicyName string `json:"qosPolicyName,omitempty"`
+	}
+
+	QoSPolicy struct {
+		Name        string         `json:"name"`
+		Partition   string         `json:"partition"`
+		Description string         `json:"description,omitempty"`
+		Limit       QoSPolicyLimit `json:"limit"`
+	}
+
+	// QoSPolicyLimit is the quality of service policy limit.
+	// Only one field is being set. The other fields will be null.
+	QoSPolicyLimit struct {
+		IOPS      *QoSPolicyLimitIOPS      `json:"iops,omitempty"`
+		Bandwidth *QoSPolicyLimitBandwidth `json:"bandwidth,omitempty"`
+		IOPSPerGB *QoSPolicyLimitIOPSPerGB `json:"iopsPerGB,omitempty"`
+	}
+
+	// QoSPolicyLimitIOPS represents a limit of IOPS. Must be a power of 2, but at least 256. 0 represents unlimited IOPS.
+	QoSPolicyLimitIOPS struct {
+		Read  uint32 `json:"read"`
+		Write uint32 `json:"write"`
+	}
+	// QoSPolicyLimitBandwidth limits the bandwidth in units of full MB/s. 0 reprensents an unlimited bandwidth.
+	QoSPolicyLimitBandwidth struct {
+		Read  uint32 `json:"read"`
+		Write uint32 `json:"write"`
+	}
+	// QoSPolicyLimitIOPSPerGB represents a limit of IOPS per GB volume size. 0 represents unlimited IOPS.
+	QoSPolicyLimitIOPSPerGB struct {
+		Read  uint32 `json:"read"`
+		Write uint32 `json:"write"`
+	}
+)
 
 func init() {
 	SchemeBuilder.Register(&Duros{}, &DurosList{})

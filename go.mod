@@ -8,6 +8,7 @@ require (
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.3.0
 	github.com/metal-stack/duros-go v0.5.0
 	github.com/metal-stack/v v1.0.3
+	github.com/stretchr/testify v1.9.0
 	google.golang.org/grpc v1.64.0
 	k8s.io/api v0.28.9
 	k8s.io/apimachinery v0.28.9
@@ -46,11 +47,13 @@ require (
 	github.com/onsi/ginkgo/v2 v2.19.0 // indirect
 	github.com/onsi/gomega v1.33.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.19.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.54.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect

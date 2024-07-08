@@ -107,7 +107,7 @@ func main() {
 		var lvlvar slog.LevelVar
 		err := lvlvar.UnmarshalText([]byte(logLevel))
 		if err != nil {
-			setupLog.Error(err, "can't initialize zap logger")
+			setupLog.Error(err, "can't initialize logger")
 			os.Exit(1)
 		}
 		level = lvlvar.Level()
