@@ -127,7 +127,7 @@ func main() {
 		}
 		durosConfig.ByteCredentials = creds
 	}
-	durosClient, err := duros.Dial(ctx, durosConfig)
+	durosClient, err := duros.Dial(durosConfig)
 	if err != nil {
 		l.Error("cannot connect to duros api", "err", err)
 		os.Exit(1)
