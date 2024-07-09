@@ -33,7 +33,7 @@ func (e *Ensurer) EnsurePolicies(ctx context.Context, want []QoSPolicyDef) error
 		if !isGlobalPolicy(p) {
 			continue
 		}
-		existingByName[p.Name] = p
+		existingByName[p.GetName()] = p
 	}
 
 	var errs []error
@@ -77,8 +77,8 @@ func (e *Ensurer) ensurePolicy(ctx context.Context, new QoSPolicyDef, old *duros
 		return err
 	}
 	_, err = e.api.UpdatePolicy(ctx, &durosv2.UpdatePolicyRequest{
-		UUID:        old.UUID,
-		Name:        old.Name,
+		UUID:        old.GetUUID(),
+		Name:        old.GetName(),
 		Description: new.Description,
 		Policy: &durosv2.UpdatePolicyRequest_QoSRateLimitPolicy{
 			QoSRateLimitPolicy: rateLimit,
@@ -123,9 +123,9 @@ func policyQoSRateLimitFromDef(def QoSPolicyDef) (*durosv2.QoSRateLimitPolicy, e
 }
 
 func isGlobalPolicy(p *durosv2.Policy) bool {
-	limit, ok := p.Info.(*durosv2.Policy_QoSRateLimitPolicy)
+	limit, ok := p.GetInfo().(*durosv2.Policy_QoSRateLimitPolicy)
 	if !ok {
 		return false
 	}
-	return limit.QoSRateLimitPolicy.PolicyVisibility == durosv2.PolicyVisibility_Global
+	return limit.QoSRateLimitPolicy.GetPolicyVisibility() == durosv2.PolicyVisibility_Global
 }

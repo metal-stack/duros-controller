@@ -503,6 +503,7 @@ func copyExportedFields(expected interface{}) interface{} {
 	expectedKind := expectedType.Kind()
 	expectedValue := reflect.ValueOf(expected)
 
+	//nolint:exhaustive
 	switch expectedKind {
 	case reflect.Struct:
 		result := reflect.New(expectedType).Elem()
@@ -562,14 +563,14 @@ func isNil(object interface{}) bool {
 	}
 
 	value := reflect.ValueOf(object)
+	//nolint:exhaustive
 	switch value.Kind() {
 	case
 		reflect.Chan, reflect.Func,
 		reflect.Interface, reflect.Map,
 		reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
-
 		return value.IsNil()
+	default:
+		return false
 	}
-
-	return false
 }
