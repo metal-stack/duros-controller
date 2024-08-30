@@ -88,8 +88,8 @@ github.com/kubernetes-csi/external-snapshotter/client/v6 v6.3.0 h1:qS4r4ljINLWKJ
 github.com/kubernetes-csi/external-snapshotter/client/v6 v6.3.0/go.mod h1:oGXx2XTEzs9ikW2V6IC1dD8trgjRsS/Mvc2JRiC618Y=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
-github.com/metal-stack/duros-go v0.5.1-0.20240813075507-25498d587ffd h1:7BqihFZlQyByhnA1wjflsnkXYo5t+UUMvnwOsefWeBc=
-github.com/metal-stack/duros-go v0.5.1-0.20240813075507-25498d587ffd/go.mod h1:Z9mzI9ds2gI8zHC03PUCQvmlWa7WAPukDCUhowtVeOk=
+github.com/metal-stack/duros-go v0.5.1 h1:baE/c0AKy9sTOztPhILJLaoMmT17Ajsb+xRMfHROFag=
+github.com/metal-stack/duros-go v0.5.1/go.mod h1:Z9mzI9ds2gI8zHC03PUCQvmlWa7WAPukDCUhowtVeOk=
 github.com/metal-stack/v v1.0.3 h1:Sh2oBlnxrCUD+mVpzfC8HiqL045YWkxs0gpTvkjppqs=
 github.com/metal-stack/v v1.0.3/go.mod h1:YTahEu7/ishwpYKnp/VaW/7nf8+PInogkfGwLcGPdXg=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
