@@ -38,7 +38,7 @@ jobs:
         cache: false
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v5
+      uses: golangci/golangci-lint-action@v6
       with:
         args: --build-tags integration -p bugs -p unused --timeout=5m
 
@@ -54,7 +54,7 @@ jobs:
         make
 
     - name: Push image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         push: true
