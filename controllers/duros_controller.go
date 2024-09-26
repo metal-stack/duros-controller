@@ -51,7 +51,6 @@ type DurosReconciler struct {
 	DurosClient     durosv2.DurosAPIClient
 	Endpoints       string
 	AdminKey        []byte
-	PSPDisabled     bool
 }
 
 // Reconcile the Duros CRD
@@ -59,7 +58,6 @@ type DurosReconciler struct {
 // +kubebuilder:rbac:groups=storage.metal-stack.io,resources=duros/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=storage.k8s.io,resources=csidrivers;csinodes;volumeattachments;storageclasses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=policy,resources=podsecuritypolicies,verbs=get;list;watch;create;update;patch;delete;use
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:apps:groups=policy,resources=statefulsets;daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:apps:groups="",resources=configmaps;events;secrets;serviceaccounts;nodes;persistentvolumes;persistentvolumeclaims;persistentvolumeclaims/status;pods,verbs=get;list;watch;create;update;patch;delete
