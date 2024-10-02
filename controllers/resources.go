@@ -8,13 +8,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/golang-jwt/jwt/v4"
+
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
 
-	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 	apps "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
 	storage "k8s.io/api/storage/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
@@ -28,6 +27,8 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	storagev1 "github.com/metal-stack/duros-controller/api/v1"
 
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v6/apis/volumesnapshot/v1"
 )
@@ -51,62 +52,6 @@ var (
 	hostPathDirectory               = corev1.HostPathDirectory
 	mountPropagationHostToContainer = corev1.MountPropagationHostToContainer
 	mountPropagationBidirectional   = corev1.MountPropagationBidirectional
-
-	// PSP
-	pspController = func() policy.PodSecurityPolicy {
-		return policy.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "lb-csi-ctrl-sa",
-			},
-			Spec: policy.PodSecurityPolicySpec{
-				FSGroup:            policy.FSGroupStrategyOptions{Rule: policy.FSGroupStrategyRunAsAny},
-				RunAsUser:          policy.RunAsUserStrategyOptions{Rule: policy.RunAsUserStrategyRunAsAny},
-				SELinux:            policy.SELinuxStrategyOptions{Rule: policy.SELinuxStrategyRunAsAny},
-				SupplementalGroups: policy.SupplementalGroupsStrategyOptions{Rule: policy.SupplementalGroupsStrategyRunAsAny},
-				Volumes: []policy.FSType{
-					"secret",
-					"emptyDir",
-				},
-			},
-		}
-	}
-	pspNode = func() policy.PodSecurityPolicy {
-		return policy.PodSecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "lb-csi-node-sa",
-			},
-			Spec: policy.PodSecurityPolicySpec{
-				AllowedCapabilities: []corev1.Capability{"SYS_ADMIN"},
-				AllowedHostPaths: []policy.AllowedHostPath{
-					{PathPrefix: "/var/lib/kubelet"},
-					{PathPrefix: "/dev"},
-					{PathPrefix: "/lib/modules"},
-					{PathPrefix: "/var/lib/kubelet/*"},
-				},
-				HostNetwork:        true,
-				Privileged:         true,
-				FSGroup:            policy.FSGroupStrategyOptions{Rule: policy.FSGroupStrategyRunAsAny},
-				RunAsUser:          policy.RunAsUserStrategyOptions{Rule: policy.RunAsUserStrategyRunAsAny},
-				SELinux:            policy.SELinuxStrategyOptions{Rule: policy.SELinuxStrategyRunAsAny},
-				SupplementalGroups: policy.SupplementalGroupsStrategyOptions{Rule: policy.SupplementalGroupsStrategyRunAsAny},
-				Volumes: []policy.FSType{
-					"secret",
-					"emptyDir",
-					"hostPath",
-				},
-			},
-		}
-	}
-
-	psps = func(withPSP bool) []policy.PodSecurityPolicy {
-		if !withPSP {
-			return []policy.PodSecurityPolicy{}
-		}
-		return []policy.PodSecurityPolicy{
-			pspNode(),
-			pspController(),
-		}
-	}
 
 	// ServiceAccounts
 	ctrlServiceAccount = func() corev1.ServiceAccount {
@@ -134,17 +79,13 @@ var (
 	}
 
 	// ClusterRoles
-	nodeClusterRole = func(withPSP bool) rbac.ClusterRole {
-		r := rbac.ClusterRole{
+	nodeClusterRole = func() rbac.ClusterRole {
+		return rbac.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "lb-csi-node",
 			},
 			Rules: []rbac.PolicyRule{},
 		}
-		if withPSP {
-			r.Rules = append(r.Rules, nodePolicyRuleForPSP())
-		}
-		return r
 	}
 
 	nodeClusterRoleBinding = func() rbac.ClusterRoleBinding {
@@ -167,17 +108,8 @@ var (
 		}
 	}
 
-	nodePolicyRuleForPSP = func() rbac.PolicyRule {
-		return rbac.PolicyRule{
-			APIGroups:     []string{"policy"},
-			Resources:     []string{"podsecuritypolicies"},
-			Verbs:         []string{"use"},
-			ResourceNames: []string{nodeServiceAccount().Name},
-		}
-	}
-
-	ctrlClusterRole = func(withPSP bool) rbac.ClusterRole {
-		r := rbac.ClusterRole{
+	ctrlClusterRole = func() rbac.ClusterRole {
+		return rbac.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "lb-csi-provisioner-role",
 			},
@@ -234,20 +166,10 @@ var (
 				},
 			},
 		}
-
-		if withPSP {
-			r.Rules = append(r.Rules, rbac.PolicyRule{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount().Name},
-			})
-		}
-		return r
 	}
 
-	attacherClusterRole = func(withPSP bool) rbac.ClusterRole {
-		r := rbac.ClusterRole{
+	attacherClusterRole = func() rbac.ClusterRole {
+		return rbac.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "lb-csi-attacher-role",
 			},
@@ -274,19 +196,10 @@ var (
 				},
 			},
 		}
-		if withPSP {
-			r.Rules = append(r.Rules, rbac.PolicyRule{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount().Name},
-			})
-		}
-		return r
 	}
 
-	resizerClusterRole = func(withPSP bool) rbac.ClusterRole {
-		r := rbac.ClusterRole{
+	resizerClusterRole = func() rbac.ClusterRole {
+		return rbac.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "external-resizer-runner",
 			},
@@ -318,19 +231,10 @@ var (
 				},
 			},
 		}
-		if withPSP {
-			r.Rules = append(r.Rules, rbac.PolicyRule{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount().Name},
-			})
-		}
-		return r
 	}
 
-	snapshotClusterRole = func(withPSP bool) rbac.ClusterRole {
-		r := rbac.ClusterRole{
+	snapshotClusterRole = func() rbac.ClusterRole {
+		return rbac.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "snapshot-controller-runner",
 			},
@@ -377,15 +281,6 @@ var (
 				},
 			},
 		}
-		if withPSP {
-			r.Rules = append(r.Rules, rbac.PolicyRule{
-				APIGroups:     []string{"policy"},
-				Resources:     []string{"podsecuritypolicies"},
-				Verbs:         []string{"use"},
-				ResourceNames: []string{ctrlServiceAccount().Name},
-			})
-		}
-		return r
 	}
 	externalSnapshotterClusterRole = func() rbac.ClusterRole {
 		return rbac.ClusterRole{
@@ -422,18 +317,18 @@ var (
 		}
 	}
 
-	clusterRoles = func(withPSP bool) []rbac.ClusterRole {
+	clusterRoles = func() []rbac.ClusterRole {
 		return []rbac.ClusterRole{
-			nodeClusterRole(withPSP),
-			attacherClusterRole(withPSP),
-			ctrlClusterRole(withPSP),
-			resizerClusterRole(withPSP),
-			snapshotClusterRole(withPSP),
+			nodeClusterRole(),
+			attacherClusterRole(),
+			ctrlClusterRole(),
+			resizerClusterRole(),
+			snapshotClusterRole(),
 			externalSnapshotterClusterRole(),
 		}
 	}
 
-	ctrlClusterRoleBinding = func(withPSP bool) rbac.ClusterRoleBinding {
+	ctrlClusterRoleBinding = func() rbac.ClusterRoleBinding {
 		return rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "lb-csi-provisioner-binding",
@@ -447,13 +342,13 @@ var (
 			},
 			RoleRef: rbac.RoleRef{
 				Kind:     "ClusterRole",
-				Name:     ctrlClusterRole(withPSP).Name,
-				APIGroup: ctrlClusterRole(withPSP).APIVersion,
+				Name:     ctrlClusterRole().Name,
+				APIGroup: ctrlClusterRole().APIVersion,
 			},
 		}
 	}
 
-	attacherClusterRoleBinding = func(withPSP bool) rbac.ClusterRoleBinding {
+	attacherClusterRoleBinding = func() rbac.ClusterRoleBinding {
 		return rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "lb-csi-attacher-binding",
@@ -467,13 +362,13 @@ var (
 			},
 			RoleRef: rbac.RoleRef{
 				Kind:     "ClusterRole",
-				Name:     attacherClusterRole(withPSP).Name,
-				APIGroup: attacherClusterRole(withPSP).APIVersion,
+				Name:     attacherClusterRole().Name,
+				APIGroup: attacherClusterRole().APIVersion,
 			},
 		}
 	}
 
-	resizerClusterRoleBinding = func(withPSP bool) rbac.ClusterRoleBinding {
+	resizerClusterRoleBinding = func() rbac.ClusterRoleBinding {
 		return rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "csi-resizer-role",
@@ -487,12 +382,12 @@ var (
 			},
 			RoleRef: rbac.RoleRef{
 				Kind:     "ClusterRole",
-				Name:     resizerClusterRole(withPSP).Name,
-				APIGroup: resizerClusterRole(withPSP).APIVersion,
+				Name:     resizerClusterRole().Name,
+				APIGroup: resizerClusterRole().APIVersion,
 			},
 		}
 	}
-	snapshotClusterRoleBinding = func(withPSP bool) rbac.ClusterRoleBinding {
+	snapshotClusterRoleBinding = func() rbac.ClusterRoleBinding {
 		return rbac.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "snapshot-controller-role",
@@ -506,8 +401,8 @@ var (
 			},
 			RoleRef: rbac.RoleRef{
 				Kind:     "ClusterRole",
-				Name:     snapshotClusterRole(withPSP).Name,
-				APIGroup: snapshotClusterRole(withPSP).APIVersion,
+				Name:     snapshotClusterRole().Name,
+				APIGroup: snapshotClusterRole().APIVersion,
 			},
 		}
 	}
@@ -530,13 +425,13 @@ var (
 			},
 		}
 	}
-	clusterRoleBindings = func(withPSP bool) []rbac.ClusterRoleBinding {
+	clusterRoleBindings = func() []rbac.ClusterRoleBinding {
 		return []rbac.ClusterRoleBinding{
 			nodeClusterRoleBinding(),
-			attacherClusterRoleBinding(withPSP),
-			ctrlClusterRoleBinding(withPSP),
-			resizerClusterRoleBinding(withPSP),
-			snapshotClusterRoleBinding(withPSP),
+			attacherClusterRoleBinding(),
+			ctrlClusterRoleBinding(),
+			resizerClusterRoleBinding(),
+			snapshotClusterRoleBinding(),
 			externalSnapshotterClusterRoleBinding(),
 		}
 	}
@@ -983,21 +878,6 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		return err
 	}
 
-	// Add PSP related stuff only for k8s < v1.25
-	withPSP := !r.PSPDisabled
-	for i := range psps(withPSP) {
-		psp := psps(withPSP)[i]
-		obj := &policy.PodSecurityPolicy{ObjectMeta: metav1.ObjectMeta{Name: psp.Name}}
-		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.Spec = psp.Spec
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		log.Info("psp", "name", psp.Name, "operation", op)
-	}
-
 	for i := range serviceAccounts() {
 		sa := serviceAccounts()[i]
 		obj := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: sa.Name, Namespace: sa.Namespace}}
@@ -1010,8 +890,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		log.Info("serviceaccount", "name", sa.Name, "operation", op)
 	}
 
-	for i := range clusterRoles(withPSP) {
-		cr := clusterRoles(withPSP)[i]
+	for i := range clusterRoles() {
+		cr := clusterRoles()[i]
 		obj := &rbac.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: cr.Name, Namespace: cr.Namespace}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			obj.Rules = cr.Rules
@@ -1023,8 +903,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		log.Info("clusterrole", "name", cr.Name, "operation", op)
 	}
 
-	for i := range clusterRoleBindings(withPSP) {
-		crb := clusterRoleBindings(withPSP)[i]
+	for i := range clusterRoleBindings() {
+		crb := clusterRoleBindings()[i]
 		obj := &rbac.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crb.Name, Namespace: crb.Namespace}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			obj.Subjects = crb.Subjects
