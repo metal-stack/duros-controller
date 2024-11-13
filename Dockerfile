@@ -1,5 +1,4 @@
-FROM alpine:3.20
+FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /
 COPY bin/duros-controller .
-USER 65534
 ENTRYPOINT ["/duros-controller"]

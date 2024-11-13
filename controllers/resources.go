@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/metal-stack/duros-go"
 	durosv2 "github.com/metal-stack/duros-go/api/duros/v2"
