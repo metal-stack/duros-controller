@@ -24,7 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -44,13 +43,12 @@ const (
 // DurosReconciler reconciles a Duros object
 type DurosReconciler struct {
 	client.Client
-	Shoot           client.Client
-	DiscoveryClient *discovery.DiscoveryClient
-	Log             logr.Logger
-	Namespace       string
-	DurosClient     durosv2.DurosAPIClient
-	Endpoints       string
-	AdminKey        []byte
+	Shoot       client.Client
+	Log         logr.Logger
+	Namespace   string
+	DurosClient durosv2.DurosAPIClient
+	Endpoints   string
+	AdminKey    []byte
 }
 
 // Reconcile the Duros CRD

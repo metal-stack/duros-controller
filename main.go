@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/go-logr/logr"
@@ -141,9 +140,6 @@ func main() {
 	}
 
 	shootClient := mgr.GetClient()
-	var (
-		discoveryClient *discovery.DiscoveryClient
-	)
 	if len(shootKubeconfig) > 0 {
 		shootRestConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			&clientcmd.ClientConfigLoadingRules{ExplicitPath: shootKubeconfig},
@@ -156,11 +152,6 @@ func main() {
 		shootClient, err = client.New(shootRestConfig, client.Options{Scheme: scheme})
 		if err != nil {
 			setupLog.Error(err, "unable to create shoot client")
-			os.Exit(1)
-		}
-		discoveryClient, err = discovery.NewDiscoveryClientForConfig(shootRestConfig)
-		if err != nil {
-			setupLog.Error(err, "unable to create shoot discovery client")
 			os.Exit(1)
 		}
 	}
@@ -243,14 +234,13 @@ func main() {
 	}
 	setupLog.Info("connected", "duros version", version.GetApiVersion(), "cluster", cinfo.GetApiEndpoints())
 	if err = (&controllers.DurosReconciler{
-		Client:          mgr.GetClient(),
-		Shoot:           shootClient,
-		DiscoveryClient: discoveryClient,
-		Log:             ctrl.Log.WithName("controllers").WithName("LightBits"),
-		Namespace:       namespace,
-		DurosClient:     durosClient,
-		Endpoints:       endpoints,
-		AdminKey:        ak,
+		Client:      mgr.GetClient(),
+		Shoot:       shootClient,
+		Log:         ctrl.Log.WithName("controllers").WithName("LightBits"),
+		Namespace:   namespace,
+		DurosClient: durosClient,
+		Endpoints:   endpoints,
+		AdminKey:    ak,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LightBits")
 		os.Exit(1)
