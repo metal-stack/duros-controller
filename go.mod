@@ -6,7 +6,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.3.0
-	github.com/metal-stack/duros-go v0.5.4-0.20250210111654-766157c4c171
+	github.com/metal-stack/duros-go v0.5.4
 	github.com/metal-stack/v v1.0.3
 	google.golang.org/grpc v1.70.0
 	k8s.io/api v0.28.9
@@ -54,8 +54,8 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3 // indirect
-	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
+	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
