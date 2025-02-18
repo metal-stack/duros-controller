@@ -277,7 +277,12 @@ var (
 				{
 					APIGroups: []string{"snapshot.storage.k8s.io"},
 					Resources: []string{"volumesnapshots/status"},
-					Verbs:     []string{"update"},
+					Verbs:     []string{"update", "patch"},
+				},
+				{
+					APIGroups: []string{"snapshot.storage.k8s.io"},
+					Resources: []string{"volumesnapshotcontents/status"},
+					Verbs:     []string{"update", "patch"},
 				},
 			},
 		}
@@ -307,11 +312,6 @@ var (
 					APIGroups: []string{"snapshot.storage.k8s.io"},
 					Resources: []string{"volumesnapshotcontents"},
 					Verbs:     []string{"create", "get", "list", "watch", "update", "patch", "delete"},
-				},
-				{
-					APIGroups: []string{"snapshot.storage.k8s.io"},
-					Resources: []string{"volumesnapshotcontents/status"},
-					Verbs:     []string{"update"},
 				},
 			},
 		}
