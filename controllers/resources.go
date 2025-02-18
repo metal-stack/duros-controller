@@ -277,7 +277,7 @@ var (
 				{
 					APIGroups: []string{"snapshot.storage.k8s.io"},
 					Resources: []string{"volumesnapshots/status"},
-					Verbs:     []string{"update"},
+					Verbs:     []string{"update", "patch"},
 				},
 			},
 		}
