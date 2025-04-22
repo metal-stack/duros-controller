@@ -1001,7 +1001,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 
 		obj := &storage.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: sc.Name}}
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
-			obj.ObjectMeta.Annotations = annotations
+			obj.Annotations = annotations
 			obj.Provisioner = provisioner
 			obj.AllowVolumeExpansion = pointer.Bool(true)
 			obj.Parameters = map[string]string{
@@ -1060,7 +1060,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		}
 		snapobj := &snapshotv1.VolumeSnapshotClass{ObjectMeta: metav1.ObjectMeta{Name: "partition-snapshot"}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, snapobj, func() error {
-			snapobj.ObjectMeta.Annotations = snapannotations
+			snapobj.Annotations = snapannotations
 			snapobj.Driver = provisioner
 			snapobj.DeletionPolicy = snapshotv1.VolumeSnapshotContentDelete
 			snapobj.Parameters = map[string]string{
@@ -1076,7 +1076,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		if err != nil {
 			return err
 		}
-		log.Info("snapshotstorageclass", "name", snapobj.ObjectMeta.Name, "operation", op)
+		log.Info("snapshotstorageclass", "name", snapobj.Name, "operation", op)
 
 	}
 
