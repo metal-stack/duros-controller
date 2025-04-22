@@ -10,7 +10,7 @@ GITVERSION := $(shell git describe --long --all)
 BUILDDATE := $(shell date -Iseconds)
 VERSION := $(or ${VERSION},devel)
 
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.17.2
 LOCALBIN ?= $(shell pwd)/bin
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 
