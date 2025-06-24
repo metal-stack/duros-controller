@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -539,11 +539,11 @@ var (
 			{Name: discoveryClientDirVolume.Name, MountPath: "/etc/discovery-client/discovery.d"},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: pointer.Bool(true),
+			Privileged: ptr.To(true),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"SYS_ADMIN"},
 			},
-			AllowPrivilegeEscalation: pointer.Bool(true),
+			AllowPrivilegeEscalation: ptr.To(true),
 		},
 		Resources: defaultResourceLimits,
 	}
@@ -552,7 +552,7 @@ var (
 		Name:            "init-nvme-tcp",
 		Image:           lbCSIPluginImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		SecurityContext: &corev1.SecurityContext{Privileged: pointer.Bool(true)},
+		SecurityContext: &corev1.SecurityContext{Privileged: ptr.To(true)},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: modulesDirVolume.Name, MountPath: "/lib/modules", MountPropagation: &mountPropagationHostToContainer},
 		},
@@ -569,8 +569,8 @@ var (
 		Image:           lbCSIPluginImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               pointer.Bool(true),
-			AllowPrivilegeEscalation: pointer.Bool(true),
+			Privileged:               ptr.To(true),
+			AllowPrivilegeEscalation: ptr.To(true),
 			Capabilities:             &corev1.Capabilities{Add: []corev1.Capability{"SYS_ADMIN"}},
 		},
 		Args: []string{"-P"},
@@ -847,8 +847,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
 			csiDriver.Spec = storage.CSIDriverSpec{
-				AttachRequired: pointer.Bool(true),
-				PodInfoOnMount: pointer.Bool(true),
+				AttachRequired: ptr.To(true),
+				PodInfoOnMount: ptr.To(true),
 			}
 			return nil
 		})
@@ -863,8 +863,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
 			csiDriver.Spec = storagev1beta1.CSIDriverSpec{
-				AttachRequired: pointer.Bool(true),
-				PodInfoOnMount: pointer.Bool(true),
+				AttachRequired: ptr.To(true),
+				PodInfoOnMount: ptr.To(true),
 			}
 			return nil
 		})
@@ -943,7 +943,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		sts.Spec = apps.StatefulSetSpec{
 			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
 			ServiceName: "lb-csi-ctrl-svc",
-			Replicas:    pointer.Int32(1),
+			Replicas:    ptr.To(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
 				Spec: corev1.PodSpec{
@@ -1003,7 +1003,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			obj.Annotations = annotations
 			obj.Provisioner = provisioner
-			obj.AllowVolumeExpansion = pointer.Bool(true)
+			obj.AllowVolumeExpansion = ptr.To(true)
 			obj.Parameters = map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",
