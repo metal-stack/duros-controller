@@ -470,6 +470,12 @@ var (
 			{Name: etcDirVolume.Name, MountPath: "/etc/lb-csi/"},
 		},
 		Resources: defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 	csiProvisionerContainer = corev1.Container{
 		Name:            "csi-provisioner",
@@ -483,6 +489,12 @@ var (
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 	csiAttacherContainer = corev1.Container{
 		Name:            "csi-attacher",
@@ -496,6 +508,12 @@ var (
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 	csiResizerContainer = corev1.Container{
 		Name:            "csi-resizer",
@@ -509,6 +527,12 @@ var (
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 	snapshotControllerContainer = corev1.Container{
 		Name:            "snapshot-controller",
@@ -516,6 +540,12 @@ var (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Args:            []string{"--leader-election=false", "--v=5"},
 		Resources:       defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 	csiSnapshotterContainer = corev1.Container{
 		Name:            "csi-snapshotter",
@@ -529,6 +559,12 @@ var (
 			{Name: socketDirVolume.Name, MountPath: "/var/lib/csi/sockets/pluginproxy/"},
 		},
 		Resources: defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 	discoveryClientContainer = corev1.Container{
 		Name:            "lb-nvme-discovery-client",
@@ -612,6 +648,12 @@ var (
 			{Name: registrationDirVolume.Name, MountPath: "/registration/"},
 		},
 		Resources: defaultResourceLimits,
+		SecurityContext: &corev1.SecurityContext{
+			AllowPrivilegeEscalation: pointer.Bool(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		},
 	}
 
 	// Volumes
@@ -950,6 +992,11 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					Containers:         containers,
 					ServiceAccountName: ctrlServiceAccount().Name,
 					PriorityClassName:  "system-cluster-critical",
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup:      pointer.Int64(65534),
+						RunAsUser:    pointer.Int64(65534),
+						RunAsNonRoot: pointer.Bool(true),
+					},
 					Volumes: []corev1.Volume{
 						socketDirVolume,
 						etcDirVolume,
