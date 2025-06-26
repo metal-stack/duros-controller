@@ -471,7 +471,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -490,7 +490,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -509,7 +509,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -528,7 +528,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -541,7 +541,7 @@ var (
 		Args:            []string{"--leader-election=false", "--v=5"},
 		Resources:       defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -560,7 +560,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -649,7 +649,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: pointer.Bool(false),
+			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -993,9 +993,9 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					ServiceAccountName: ctrlServiceAccount().Name,
 					PriorityClassName:  "system-cluster-critical",
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:      pointer.Int64(65534),
-						RunAsUser:    pointer.Int64(65534),
-						RunAsNonRoot: pointer.Bool(true),
+						FSGroup:      ptr.To(int64(65534)),
+						RunAsUser:    ptr.To(int64(65534)),
+						RunAsNonRoot: ptr.To(true),
 					},
 					Volumes: []corev1.Volume{
 						socketDirVolume,
