@@ -966,7 +966,13 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		},
 	}
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, sts, func() error {
-		controllerRoleLabels := map[string]string{"app": "lb-csi-plugin", "role": "controller", "gardener.cloud/role": "system-component"}
+		controllerRoleLabels := map[string]string{
+			"app":                                    "lb-csi-plugin",
+			"role":                                   "controller",
+			"gardener.cloud/role":                    "system-component",
+			"networking.gardener.cloud/to-apiserver": "allowed",
+			"networking.gardener.cloud/to-dns":       "allowed",
+		}
 		containers := []corev1.Container{
 			csiPluginContainer,
 			csiProvisionerContainer,
