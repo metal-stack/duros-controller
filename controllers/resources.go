@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -471,7 +470,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -490,7 +489,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -509,7 +508,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -528,7 +527,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -541,7 +540,7 @@ var (
 		Args:            []string{"--leader-election=false", "--v=5"},
 		Resources:       defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -560,7 +559,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -575,11 +574,11 @@ var (
 			{Name: discoveryClientDirVolume.Name, MountPath: "/etc/discovery-client/discovery.d"},
 		},
 		SecurityContext: &corev1.SecurityContext{
-			Privileged: ptr.To(true),
+			Privileged: new(true),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"SYS_ADMIN"},
 			},
-			AllowPrivilegeEscalation: ptr.To(true),
+			AllowPrivilegeEscalation: new(true),
 		},
 		Resources: defaultResourceLimits,
 	}
@@ -588,7 +587,7 @@ var (
 		Name:            "init-nvme-tcp",
 		Image:           lbCSIPluginImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		SecurityContext: &corev1.SecurityContext{Privileged: ptr.To(true)},
+		SecurityContext: &corev1.SecurityContext{Privileged: new(true)},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: modulesDirVolume.Name, MountPath: "/lib/modules", MountPropagation: &mountPropagationHostToContainer},
 		},
@@ -605,8 +604,8 @@ var (
 		Image:           lbCSIPluginImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: &corev1.SecurityContext{
-			Privileged:               ptr.To(true),
-			AllowPrivilegeEscalation: ptr.To(true),
+			Privileged:               new(true),
+			AllowPrivilegeEscalation: new(true),
 			Capabilities:             &corev1.Capabilities{Add: []corev1.Capability{"SYS_ADMIN"}},
 		},
 		Args: []string{"-P"},
@@ -649,7 +648,7 @@ var (
 		},
 		Resources: defaultResourceLimits,
 		SecurityContext: &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
+			AllowPrivilegeEscalation: new(false),
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"ALL"},
 			},
@@ -889,8 +888,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		csiDriver := &storage.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
 			csiDriver.Spec = storage.CSIDriverSpec{
-				AttachRequired: ptr.To(true),
-				PodInfoOnMount: ptr.To(true),
+				AttachRequired: new(true),
+				PodInfoOnMount: new(true),
 			}
 			return nil
 		})
@@ -905,8 +904,8 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		csiDriver := &storagev1beta1.CSIDriver{ObjectMeta: metav1.ObjectMeta{Name: provisioner}}
 		op, err := controllerutil.CreateOrUpdate(ctx, r.Shoot, csiDriver, func() error {
 			csiDriver.Spec = storagev1beta1.CSIDriverSpec{
-				AttachRequired: ptr.To(true),
-				PodInfoOnMount: ptr.To(true),
+				AttachRequired: new(true),
+				PodInfoOnMount: new(true),
 			}
 			return nil
 		})
@@ -991,7 +990,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		sts.Spec = apps.StatefulSetSpec{
 			Selector:    &metav1.LabelSelector{MatchLabels: controllerRoleLabels},
 			ServiceName: "lb-csi-ctrl-svc",
-			Replicas:    ptr.To(int32(1)),
+			Replicas:    new(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Labels: controllerRoleLabels},
 				Spec: corev1.PodSpec{
@@ -999,9 +998,9 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 					ServiceAccountName: ctrlServiceAccount().Name,
 					PriorityClassName:  "system-cluster-critical",
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:      ptr.To(int64(65534)),
-						RunAsUser:    ptr.To(int64(65534)),
-						RunAsNonRoot: ptr.To(true),
+						FSGroup:      new(int64(65534)),
+						RunAsUser:    new(int64(65534)),
+						RunAsNonRoot: new(true),
 					},
 					Volumes: []corev1.Volume{
 						socketDirVolume,
@@ -1056,7 +1055,7 @@ func (r *DurosReconciler) deployCSI(ctx context.Context, projectID string, scs [
 		op, err = controllerutil.CreateOrUpdate(ctx, r.Shoot, obj, func() error {
 			obj.Annotations = annotations
 			obj.Provisioner = provisioner
-			obj.AllowVolumeExpansion = ptr.To(true)
+			obj.AllowVolumeExpansion = new(true)
 			obj.Parameters = map[string]string{
 				"mgmt-scheme":   "grpcs",
 				"compression":   "disabled",

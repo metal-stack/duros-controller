@@ -255,7 +255,7 @@ func main() {
 }
 
 func validateEndpoints(endpoints string) error {
-	for _, endpoint := range strings.Split(endpoints, ",") {
+	for endpoint := range strings.SplitSeq(endpoints, ",") {
 		host, port, err := net.SplitHostPort(strings.TrimSpace(endpoint))
 		if err != nil {
 			return err
