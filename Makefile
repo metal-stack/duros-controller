@@ -14,7 +14,7 @@ CONTROLLER_TOOLS_VERSION ?= v0.19.0
 LOCALBIN ?= $(shell pwd)/bin
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 
-all: manager
+all: generate fmt vet manager
 
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
@@ -29,7 +29,7 @@ test: generate fmt vet manifests
 	CGO_ENABLED=1 go test ./... -coverprofile cover.out -race -timeout 30s
 
 # Build manager binary
-manager: generate fmt vet
+manager:
 	go build -tags netgo -ldflags "-X 'github.com/metal-stack/v.Version=$(VERSION)' \
 								   -X 'github.com/metal-stack/v.Revision=$(GITVERSION)' \
 								   -X 'github.com/metal-stack/v.GitSHA1=$(SHA)' \
